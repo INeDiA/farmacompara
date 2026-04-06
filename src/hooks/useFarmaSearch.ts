@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
 
 export interface ProductWithPharmacy {
   id: string;
@@ -44,23 +43,11 @@ export function useFarmaSearch() {
     setResults(null);
 
     try {
-      const { data, error: fnError } = await supabase.functions.invoke(
-        "farma-search",
-        {
-          method: "GET",
-          headers: { "Content-Type": "application/json" },
-          body: undefined,
-        }
-      );
-
-      // supabase.functions.invoke doesn't support query params easily,
-      // so let's use fetch directly
-      const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
       const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
       const anonKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 
       const response = await fetch(
-        `${supabaseUrl}/functions/v1/farma-search?q=${encodeURIComponent(query.trim())}`,
+        `${supabaseUrl}/functions/v1/farma-search?q=${encodeURIComponent(query.trim().toLowerCase())}`,
         {
           headers: {
             Authorization: `Bearer ${anonKey}`,
@@ -74,8 +61,8 @@ export function useFarmaSearch() {
         throw new Error(err.error || "Errore nella ricerca");
       }
 
-      const data2: SearchResult = await response.json();
-      setResults(data2);
+      const data: SearchResult = await response.json();
+      setResults(data);
     } catch (err: any) {
       setError(err.message || "Errore sconosciuto");
     } finally {
