@@ -1,16 +1,112 @@
-// Update this page (the content is just a fallback if you fail to update the page)
+import { Pill, TrendingDown, Shield, Truck } from "lucide-react";
+import { SearchBar } from "@/components/SearchBar";
+import { ResultsTable } from "@/components/ResultsTable";
+import { LoadingSkeleton } from "@/components/LoadingSkeleton";
+import { useFarmaSearch } from "@/hooks/useFarmaSearch";
 
-// IMPORTANT: Fully REPLACE this with your own code
-const PlaceholderIndex = () => {
-  // PLACEHOLDER: Replace this entire return statement with the user's app.
-  // The inline background color is intentionally not part of the design system.
+const Index = () => {
+  const { results, loading, error, search } = useFarmaSearch();
+
   return (
-    <div className="flex min-h-screen items-center justify-center" style={{ backgroundColor: '#fcfbf8' }}>
-      <img data-lovable-blank-page-placeholder="REMOVE_THIS" src="/placeholder.svg" alt="Your app will live here!" />
+    <div className="min-h-screen bg-background">
+      {/* Header */}
+      <header className="border-b bg-card/80 backdrop-blur-sm sticky top-0 z-10">
+        <div className="container mx-auto px-4 py-3 flex items-center gap-3">
+          <div className="flex items-center gap-2">
+            <div className="h-9 w-9 rounded-xl bg-primary flex items-center justify-center">
+              <Pill className="h-5 w-5 text-primary-foreground" />
+            </div>
+            <h1 className="text-xl font-bold tracking-tight">FarmaCompare</h1>
+          </div>
+          <span className="text-xs text-muted-foreground hidden sm:block">
+            Confronta i prezzi al mg dei farmaci online
+          </span>
+        </div>
+      </header>
+
+      <main className="container mx-auto px-4 py-8">
+        {/* Hero section - shown when no results */}
+        {!results && !loading && (
+          <div className="text-center mb-10 space-y-6">
+            <div className="space-y-3">
+              <h2 className="text-3xl sm:text-4xl font-bold tracking-tight">
+                Il prezzo al{" "}
+                <span className="text-primary">milligrammo</span>
+                <br />
+                dei farmaci online
+              </h2>
+              <p className="text-muted-foreground max-w-lg mx-auto">
+                Confronta il reale costo dei farmaci come confronti il prezzo al
+                chilo al supermercato. Cerca per principio attivo e trova la vera
+                convenienza.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 max-w-2xl mx-auto mt-8">
+              <div className="flex flex-col items-center gap-2 p-4 rounded-2xl bg-card border">
+                <TrendingDown className="h-6 w-6 text-primary" />
+                <p className="text-sm font-medium">Prezzo/mg</p>
+                <p className="text-xs text-muted-foreground text-center">
+                  Confronto reale per milligrammo di principio attivo
+                </p>
+              </div>
+              <div className="flex flex-col items-center gap-2 p-4 rounded-2xl bg-card border">
+                <Truck className="h-6 w-6 text-primary" />
+                <p className="text-sm font-medium">Spedizione inclusa</p>
+                <p className="text-xs text-muted-foreground text-center">
+                  Costi e soglie di spedizione gratuita sempre visibili
+                </p>
+              </div>
+              <div className="flex flex-col items-center gap-2 p-4 rounded-2xl bg-card border">
+                <Shield className="h-6 w-6 text-primary" />
+                <p className="text-sm font-medium">6 farmacie</p>
+                <p className="text-xs text-muted-foreground text-center">
+                  Farmacie autorizzate che spediscono in tutta Italia
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Search */}
+        <SearchBar onSearch={search} loading={loading} />
+
+        {/* Error */}
+        {error && (
+          <div className="mt-6 p-4 rounded-xl bg-destructive/10 border border-destructive/20 text-center">
+            <p className="text-destructive font-medium">{error}</p>
+            <p className="text-sm text-muted-foreground mt-1">
+              Riprova tra qualche secondo
+            </p>
+          </div>
+        )}
+
+        {/* Loading */}
+        {loading && <LoadingSkeleton />}
+
+        {/* Results */}
+        {results && !loading && (
+          <ResultsTable
+            products={results.products}
+            fromCache={results.from_cache}
+          />
+        )}
+      </main>
+
+      {/* Footer */}
+      <footer className="border-t mt-auto">
+        <div className="container mx-auto px-4 py-6 text-center text-xs text-muted-foreground space-y-1">
+          <p>
+            FarmaCompare — confronto prezzi farmaci online italiani
+          </p>
+          <p>
+            I prezzi mostrati sono indicativi e aggiornati ogni 24 ore. Verifica
+            sempre sul sito della farmacia prima dell'acquisto.
+          </p>
+        </div>
+      </footer>
     </div>
   );
 };
-
-const Index = PlaceholderIndex;
 
 export default Index;
