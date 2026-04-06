@@ -14,7 +14,119 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      pharmacies: {
+        Row: {
+          base_url: string
+          created_at: string
+          free_shipping_threshold: number | null
+          id: string
+          logo_url: string | null
+          name: string
+          search_url_template: string
+          shipping_cost: number
+          updated_at: string
+        }
+        Insert: {
+          base_url: string
+          created_at?: string
+          free_shipping_threshold?: number | null
+          id?: string
+          logo_url?: string | null
+          name: string
+          search_url_template: string
+          shipping_cost?: number
+          updated_at?: string
+        }
+        Update: {
+          base_url?: string
+          created_at?: string
+          free_shipping_threshold?: number | null
+          id?: string
+          logo_url?: string | null
+          name?: string
+          search_url_template?: string
+          shipping_cost?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      products: {
+        Row: {
+          active_ingredient: string
+          dosage_mg: number | null
+          id: string
+          image_url: string | null
+          last_scraped: string
+          name: string
+          pharmacy_id: string
+          price: number
+          price_per_mg: number | null
+          product_url: string | null
+          quantity: number | null
+          total_mg: number | null
+        }
+        Insert: {
+          active_ingredient: string
+          dosage_mg?: number | null
+          id?: string
+          image_url?: string | null
+          last_scraped?: string
+          name: string
+          pharmacy_id: string
+          price: number
+          price_per_mg?: number | null
+          product_url?: string | null
+          quantity?: number | null
+          total_mg?: number | null
+        }
+        Update: {
+          active_ingredient?: string
+          dosage_mg?: number | null
+          id?: string
+          image_url?: string | null
+          last_scraped?: string
+          name?: string
+          pharmacy_id?: string
+          price?: number
+          price_per_mg?: number | null
+          product_url?: string | null
+          quantity?: number | null
+          total_mg?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "products_pharmacy_id_fkey"
+            columns: ["pharmacy_id"]
+            isOneToOne: false
+            referencedRelation: "pharmacies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      search_cache: {
+        Row: {
+          expires_at: string
+          id: string
+          last_scraped: string
+          query: string
+          result_count: number | null
+        }
+        Insert: {
+          expires_at?: string
+          id?: string
+          last_scraped?: string
+          query: string
+          result_count?: number | null
+        }
+        Update: {
+          expires_at?: string
+          id?: string
+          last_scraped?: string
+          query?: string
+          result_count?: number | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
