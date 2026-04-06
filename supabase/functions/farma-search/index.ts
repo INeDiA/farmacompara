@@ -1,5 +1,4 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
-import { DOMParser } from "https://deno.land/x/deno_dom@v0.1.48/deno-dom-wasm.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -18,30 +17,19 @@ interface ProductResult {
   image_url: string | null;
 }
 
-interface PharmacyConfig {
-  id: string;
-  name: string;
-  search_url_template: string;
-  shipping_cost: number;
-  free_shipping_threshold: number | null;
-}
-
 // Extract dosage in mg from product name
 function extractDosageMg(text: string): number | null {
-  // Match patterns like "1000mg", "500 mg", "1g", "1,5g"
   const mgMatch = text.match(/(\d+[.,]?\d*)\s*mg/i);
   if (mgMatch) return parseFloat(mgMatch[1].replace(",", "."));
-
   const gMatch = text.match(/(\d+[.,]?\d*)\s*g(?:r)?(?:\b|$)/i);
   if (gMatch) return parseFloat(gMatch[1].replace(",", ".")) * 1000;
-
   return null;
 }
 
 // Extract quantity from product name
 function extractQuantity(text: string): number | null {
   const patterns = [
-    /(\d+)\s*(?:compresse|cpr|capsule|cps|bustine|bust|buste|supposte|fiale|flaconi|comprimés|tabs|tablets|sachets|granulato|conf)/i,
+    /(\d+)\s*(?:compresse|cpr|capsule|cps|bustine|bust|buste|supposte|fiale|flaconi|tabs|tablets|sachets|granulato|conf|ovuli)/i,
     /x\s*(\d+)/i,
     /(\d+)\s*(?:pz|pezzi|unità)/i,
   ];
@@ -52,193 +40,108 @@ function extractQuantity(text: string): number | null {
   return null;
 }
 
-// Extract price from text
-function extractPrice(text: string): number | null {
-  // Match "€ 5,99", "5.99€", "€5,99", "EUR 5.99", "Prezzo: 5,99"
-  const patterns = [
-    /€\s*(\d+[.,]\d{2})/,
-    /(\d+[.,]\d{2})\s*€/,
-    /EUR\s*(\d+[.,]\d{2})/i,
-    /prezzo[:\s]*(\d+[.,]\d{2})/i,
-  ];
-  for (const p of patterns) {
-    const m = text.match(p);
-    if (m) return parseFloat(m[1].replace(",", "."));
-  }
-  return null;
+function computePricePerMg(price: number, dosage: number | null, qty: number | null): { total_mg: number | null; price_per_mg: number | null } {
+  const total_mg = dosage && qty ? dosage * qty : null;
+  const price_per_mg = total_mg && total_mg > 0 ? price / total_mg : null;
+  return { total_mg, price_per_mg };
 }
 
-// Generic scraper that works for most Italian pharmacy e-commerce sites
-async function scrapePharmacy(
-  pharmacy: PharmacyConfig,
-  query: string
-): Promise<ProductResult[]> {
-  const searchUrl = pharmacy.search_url_template.replace(
-    "{query}",
-    encodeURIComponent(query)
-  );
-
+// ============ FARMAE (Shopify) ============
+async function scrapeFarmae(query: string): Promise<ProductResult[]> {
   try {
-    const response = await fetch(searchUrl, {
-      headers: {
-        "User-Agent":
-          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-        Accept:
-          "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-        "Accept-Language": "it-IT,it;q=0.9,en;q=0.8",
-      },
+    const url = `https://www.farmae.it/search/suggest.json?q=${encodeURIComponent(query)}&resources%5Btype%5D=product&resources%5Blimit%5D=20`;
+    const res = await fetch(url, {
+      headers: { "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36" },
     });
-
-    if (!response.ok) {
-      console.error(
-        `Failed to fetch ${pharmacy.name}: ${response.status}`
-      );
-      return [];
-    }
-
-    const html = await response.text();
-    const doc = new DOMParser().parseFromString(html, "text/html");
-    if (!doc) return [];
-
-    const products: ProductResult[] = [];
-
-    // Common selectors for Italian pharmacy e-commerce (Magento/PrestaShop/WooCommerce)
-    const selectors = [
-      ".product-item",
-      ".product-card",
-      ".product",
-      ".item.product",
-      "li.product-item",
-      ".products-grid .item",
-      ".search-result-item",
-      "[data-product]",
-      ".product-list-item",
-    ];
-
-    let productElements: Element[] = [];
-    for (const sel of selectors) {
-      const els = doc.querySelectorAll(sel);
-      if (els.length > 0) {
-        productElements = Array.from(els) as Element[];
-        break;
-      }
-    }
-
-    // If no product elements found, try to parse from full page text
-    if (productElements.length === 0) {
-      // Fallback: try to find product data in structured data (JSON-LD)
-      const scripts = doc.querySelectorAll(
-        'script[type="application/ld+json"]'
-      );
-      for (const script of scripts) {
-        try {
-          const data = JSON.parse(script.textContent || "");
-          const items = data.itemListElement || (Array.isArray(data) ? data : [data]);
-          for (const item of items) {
-            const product = item.item || item;
-            if (product["@type"] === "Product" && product.offers) {
-              const name = product.name || "";
-              const price =
-                parseFloat(product.offers.price || product.offers.lowPrice) ||
-                null;
-              if (name && price && name.toLowerCase().includes(query.toLowerCase())) {
-                const dosage = extractDosageMg(name);
-                const qty = extractQuantity(name);
-                const totalMg =
-                  dosage && qty ? dosage * qty : null;
-                products.push({
-                  name,
-                  price,
-                  dosage_mg: dosage,
-                  quantity: qty,
-                  total_mg: totalMg,
-                  price_per_mg:
-                    totalMg && totalMg > 0 ? price / totalMg : null,
-                  product_url: product.url || null,
-                  image_url: product.image || null,
-                });
-              }
-            }
-          }
-        } catch {
-          // ignore parse errors
-        }
-      }
-    }
-
-    // Parse product elements
-    for (const el of productElements.slice(0, 20)) {
-      // Product name
-      const nameEl =
-        el.querySelector(".product-item-link") ||
-        el.querySelector(".product-name") ||
-        el.querySelector(".product-title") ||
-        el.querySelector("h2 a") ||
-        el.querySelector("h3 a") ||
-        el.querySelector("a.product-item-link") ||
-        el.querySelector("[data-product-name]") ||
-        el.querySelector(".name a");
-      const name = (
-        nameEl?.textContent?.trim() ||
-        el.querySelector("a")?.getAttribute("title") ||
-        ""
-      ).trim();
-
-      if (!name || !name.toLowerCase().includes(query.toLowerCase().split(" ")[0])) continue;
-
-      // Price
-      const priceEl =
-        el.querySelector(".price") ||
-        el.querySelector(".product-price") ||
-        el.querySelector("[data-price]") ||
-        el.querySelector(".special-price .price") ||
-        el.querySelector(".final-price .price");
-      let price = priceEl
-        ? extractPrice(priceEl.textContent || "")
-        : null;
-
-      if (!price) {
-        const dataPriceAttr = el.querySelector("[data-price]")?.getAttribute("data-price");
-        if (dataPriceAttr) price = parseFloat(dataPriceAttr);
-      }
-
-      if (!name || !price) continue;
-
-      // URL
-      const linkEl =
-        nameEl?.closest("a") ||
-        el.querySelector("a[href]");
-      const productUrl = linkEl?.getAttribute("href") || null;
-
-      // Image
-      const imgEl = el.querySelector("img");
-      const imageUrl =
-        imgEl?.getAttribute("src") ||
-        imgEl?.getAttribute("data-src") ||
-        null;
-
-      const dosage = extractDosageMg(name);
-      const qty = extractQuantity(name);
-      const totalMg = dosage && qty ? dosage * qty : null;
-
-      products.push({
-        name,
-        price,
-        dosage_mg: dosage,
-        quantity: qty,
-        total_mg: totalMg,
-        price_per_mg: totalMg && totalMg > 0 ? price / totalMg : null,
-        product_url: productUrl,
-        image_url: imageUrl,
-      });
-    }
-
-    return products;
+    if (!res.ok) return [];
+    const data = await res.json();
+    const products = data?.resources?.results?.products || [];
+    
+    return products
+      .filter((p: any) => p.title?.toLowerCase().includes(query.toLowerCase().split(" ")[0]))
+      .map((p: any) => {
+        const name = p.title || "";
+        const price = parseFloat(p.price) || 0;
+        const dosage = extractDosageMg(name);
+        const qty = extractQuantity(name);
+        const { total_mg, price_per_mg } = computePricePerMg(price, dosage, qty);
+        return {
+          name,
+          price,
+          dosage_mg: dosage,
+          quantity: qty,
+          total_mg,
+          price_per_mg,
+          product_url: p.url ? `https://www.farmae.it${p.url}` : null,
+          image_url: p.image || null,
+        };
+      })
+      .filter((p: ProductResult) => p.price > 0);
   } catch (err) {
-    console.error(`Error scraping ${pharmacy.name}:`, err);
+    console.error("Farmae error:", err);
     return [];
   }
 }
+
+// ============ EFARMA (Algolia) ============
+async function scrapeEfarma(query: string): Promise<ProductResult[]> {
+  try {
+    const res = await fetch(
+      "https://70OAFALOKQ-dsn.algolia.net/1/indexes/pro_efarma_it_products/query",
+      {
+        method: "POST",
+        headers: {
+          "x-algolia-application-id": "70OAFALOKQ",
+          "x-algolia-api-key": "ZmIzN2IwYTExMmEwNTRhOTVmMjVhNzc0NDQ4NDIzZjQ4NmJlYzIzMWMzYWRiYjg2N2QxMzhhNjBiOWUxNDQ3MXRhZ0ZpbHRlcnM9JnZhbGlkVW50aWw9MTc3NTU0ODk2OA==",
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          query,
+          hitsPerPage: 20,
+          attributesToRetrieve: ["name", "price", "url", "image_url", "thumbnail_url"],
+        }),
+      }
+    );
+    if (!res.ok) return [];
+    const data = await res.json();
+    const hits = data?.hits || [];
+
+    return hits
+      .filter((h: any) => h.name?.toLowerCase().includes(query.toLowerCase().split(" ")[0]))
+      .map((h: any) => {
+        const name = h.name || "";
+        const price = h.price?.EUR?.default || h.price?.EUR?.default_original || 0;
+        const dosage = extractDosageMg(name);
+        const qty = extractQuantity(name);
+        const { total_mg, price_per_mg } = computePricePerMg(price, dosage, qty);
+        return {
+          name,
+          price,
+          dosage_mg: dosage,
+          quantity: qty,
+          total_mg,
+          price_per_mg,
+          product_url: h.url || null,
+          image_url: h.image_url || h.thumbnail_url || null,
+        };
+      })
+      .filter((p: ProductResult) => p.price > 0);
+  } catch (err) {
+    console.error("eFarma error:", err);
+    return [];
+  }
+}
+
+// ============ PHARMACY REGISTRY ============
+interface PharmacyScraper {
+  pharmacyName: string;
+  scrape: (query: string) => Promise<ProductResult[]>;
+}
+
+const scrapers: PharmacyScraper[] = [
+  { pharmacyName: "Farmae", scrape: scrapeFarmae },
+  { pharmacyName: "eFarma", scrape: scrapeEfarma },
+];
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -251,7 +154,7 @@ Deno.serve(async (req) => {
 
     if (!query || query.length < 2) {
       return new Response(
-        JSON.stringify({ error: "Query parameter 'q' is required (min 2 chars)" }),
+        JSON.stringify({ error: "Parametro 'q' richiesto (min 2 caratteri)" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -269,7 +172,6 @@ Deno.serve(async (req) => {
       .maybeSingle();
 
     if (cache) {
-      // Serve from cache
       const { data: products } = await supabase
         .from("products")
         .select("*, pharmacies(*)")
@@ -287,40 +189,38 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Fetch pharmacies
+    // Get pharmacy IDs from DB
     const { data: pharmacies } = await supabase
       .from("pharmacies")
-      .select("*");
+      .select("id, name");
 
-    if (!pharmacies || pharmacies.length === 0) {
-      return new Response(
-        JSON.stringify({ error: "No pharmacies configured" }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+    const pharmacyIdMap: Record<string, string> = {};
+    for (const p of pharmacies || []) {
+      pharmacyIdMap[p.name] = p.id;
     }
 
-    // Scrape all pharmacies in parallel
-    const scrapePromises = pharmacies.map((p) =>
-      scrapePharmacy(p as PharmacyConfig, query).then((products) => ({
-        pharmacy: p,
-        products,
-      }))
+    // Scrape all in parallel
+    const results = await Promise.all(
+      scrapers.map(async (s) => {
+        const products = await s.scrape(query);
+        return { pharmacyName: s.pharmacyName, products };
+      })
     );
 
-    const results = await Promise.all(scrapePromises);
+    // Delete old products for this query
+    await supabase.from("products").delete().eq("active_ingredient", query);
 
-    // Delete old products for this active ingredient
-    await supabase
-      .from("products")
-      .delete()
-      .eq("active_ingredient", query);
-
-    // Insert new products
+    // Prepare inserts
     const allProducts: any[] = [];
     for (const r of results) {
+      const pharmacyId = pharmacyIdMap[r.pharmacyName];
+      if (!pharmacyId) {
+        console.warn(`No pharmacy ID for ${r.pharmacyName}`);
+        continue;
+      }
       for (const p of r.products) {
         allProducts.push({
-          pharmacy_id: r.pharmacy.id,
+          pharmacy_id: pharmacyId,
           name: p.name,
           active_ingredient: query,
           dosage_mg: p.dosage_mg,
@@ -335,21 +235,15 @@ Deno.serve(async (req) => {
     }
 
     if (allProducts.length > 0) {
-      await supabase.from("products").insert(allProducts);
+      const { error: insertError } = await supabase.from("products").insert(allProducts);
+      if (insertError) console.error("Insert error:", insertError);
     }
 
-    // Upsert cache entry
-    await supabase
-      .from("search_cache")
-      .delete()
-      .eq("query", query);
-    
-    await supabase.from("search_cache").insert({
-      query,
-      result_count: allProducts.length,
-    });
+    // Upsert cache
+    await supabase.from("search_cache").delete().eq("query", query);
+    await supabase.from("search_cache").insert({ query, result_count: allProducts.length });
 
-    // Fetch back with pharmacy info
+    // Fetch with pharmacy info
     const { data: finalProducts } = await supabase
       .from("products")
       .select("*, pharmacies(*)")
@@ -360,7 +254,7 @@ Deno.serve(async (req) => {
       JSON.stringify({
         products: finalProducts || [],
         from_cache: false,
-        pharmacies_scraped: pharmacies.length,
+        pharmacies_scraped: scrapers.length,
         products_found: allProducts.length,
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -368,7 +262,7 @@ Deno.serve(async (req) => {
   } catch (err) {
     console.error("farma-search error:", err);
     return new Response(
-      JSON.stringify({ error: "Internal server error", details: String(err) }),
+      JSON.stringify({ error: "Errore interno del server", details: String(err) }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
