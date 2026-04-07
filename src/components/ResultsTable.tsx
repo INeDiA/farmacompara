@@ -16,10 +16,9 @@ interface ResultsTableProps {
   fromCache: boolean;
 }
 
-function formatPricePerMg(value: number | null): string {
+function formatPricePerG(value: number | null): string {
   if (!value) return "N/D";
-  if (value < 0.001) return `€${(value * 1000).toFixed(4)}/g`;
-  return `€${value.toFixed(4)}/mg`;
+  return `€${(value * 1000).toFixed(2)}/g`;
 }
 
 function formatPrice(value: number): string {
@@ -89,9 +88,9 @@ export function ResultsTable({ products, fromCache }: ResultsTableProps) {
                   </p>
                 </div>
                 <div>
-                  <p className="text-muted-foreground text-xs">€/mg</p>
+                  <p className="text-muted-foreground text-xs">€/g</p>
                   <p className={`font-bold ${i === 0 ? "text-primary" : ""}`}>
-                    {formatPricePerMg(p.price_per_mg)}
+                    {formatPricePerG(p.price_per_mg)}
                   </p>
                 </div>
               </div>
@@ -127,7 +126,7 @@ export function ResultsTable({ products, fromCache }: ResultsTableProps) {
               <TableHead className="text-right">Prezzo</TableHead>
               <TableHead className="text-right">Dosaggio</TableHead>
               <TableHead className="text-right">Qtà</TableHead>
-              <TableHead className="text-right font-bold">€/mg</TableHead>
+              <TableHead className="text-right font-bold">€/g</TableHead>
               <TableHead>Spedizione</TableHead>
               <TableHead className="w-8"></TableHead>
             </TableRow>
@@ -163,7 +162,7 @@ export function ResultsTable({ products, fromCache }: ResultsTableProps) {
                 <TableCell
                   className={`text-right font-bold ${i === 0 ? "text-primary" : ""}`}
                 >
-                  {formatPricePerMg(p.price_per_mg)}
+                  {formatPricePerG(p.price_per_mg)}
                 </TableCell>
                 <TableCell className="text-xs text-muted-foreground">
                   <div className="flex items-center gap-1">
