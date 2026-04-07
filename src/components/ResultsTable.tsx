@@ -16,10 +16,9 @@ interface ResultsTableProps {
   fromCache: boolean;
 }
 
-function formatPricePerMg(value: number | null): string {
+function formatPricePerG(value: number | null): string {
   if (!value) return "N/D";
-  if (value < 0.001) return `€${(value * 1000).toFixed(4)}/g`;
-  return `€${value.toFixed(4)}/mg`;
+  return `€${(value * 1000).toFixed(2)}/g`;
 }
 
 function formatPrice(value: number): string {

@@ -11,10 +11,10 @@ interface SearchBarProps {
 const suggestions = [
   "Paracetamolo",
   "Ibuprofene",
-  "Tachipirina",
-  "Aspirina",
-  "Moment",
-  "OKi",
+  "Ketoprofene",
+  "Acido acetilsalicilico",
+  "Diclofenac",
+  "Nimesulide",
 ];
 
 export function SearchBar({ onSearch, loading }: SearchBarProps) {
