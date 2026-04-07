@@ -49,8 +49,7 @@ function computePricePerMg(price: number, dosage: number | null, qty: number | n
 }
 
 function parseItalianPrice(text: string): number {
-  const cleaned = text.replace(/[^\d,.\s]/g, "").trim();
-  // Handle "6,84" format (Italian decimal comma)
+  const cleaned = text.replace(/[^\d,.]/g, "").trim();
   const match = cleaned.match(/(\d+)[,.](\d{2})$/);
   if (match) return parseFloat(`${match[1]}.${match[2]}`);
   return parseFloat(cleaned) || 0;
@@ -78,17 +77,11 @@ async function scrapeFarmae(query: string): Promise<ProductResult[]> {
     const products = data?.resources?.results?.products || [];
     return filterByQuery(
       products.map((p: any) => buildProduct(
-        p.title || "",
-        parseFloat(p.price) || 0,
-        p.url ? `https://www.farmae.it${p.url}` : null,
-        p.image || null,
-      )),
-      query,
+        p.title || "", parseFloat(p.price) || 0,
+        p.url ? `https://www.farmae.it${p.url}` : null, p.image || null,
+      )), query,
     );
-  } catch (err) {
-    console.error("Farmae error:", err);
-    return [];
-  }
+  } catch (err) { console.error("Farmae error:", err); return []; }
 }
 
 // ============ EFARMA (Algolia) ============
@@ -110,17 +103,11 @@ async function scrapeEfarma(query: string): Promise<ProductResult[]> {
     const data = await res.json();
     return filterByQuery(
       (data?.hits || []).map((h: any) => buildProduct(
-        h.name || "",
-        h.price?.EUR?.default || h.price?.EUR?.default_original || 0,
-        h.url || null,
-        h.image_url || h.thumbnail_url || null,
-      )),
-      query,
+        h.name || "", h.price?.EUR?.default || h.price?.EUR?.default_original || 0,
+        h.url || null, h.image_url || h.thumbnail_url || null,
+      )), query,
     );
-  } catch (err) {
-    console.error("eFarma error:", err);
-    return [];
-  }
+  } catch (err) { console.error("eFarma error:", err); return []; }
 }
 
 // ============ AMICAFARMACIA (Shopify) ============
@@ -133,135 +120,51 @@ async function scrapeAmicafarmacia(query: string): Promise<ProductResult[]> {
     const products = data?.resources?.results?.products || [];
     return filterByQuery(
       products.map((p: any) => buildProduct(
-        p.title || "",
-        parseFloat(p.price) || 0,
-        p.url ? `https://www.amicafarmacia.com${p.url}` : null,
-        p.image || null,
-      )),
-      query,
+        p.title || "", parseFloat(p.price) || 0,
+        p.url ? `https://www.amicafarmacia.com${p.url}` : null, p.image || null,
+      )), query,
     );
-  } catch (err) {
-    console.error("Amicafarmacia error:", err);
-    return [];
-  }
-}
-
-// ============ FARMACIA LORETO (OpenCart HTML) ============
-async function scrapeLoreto(query: string): Promise<ProductResult[]> {
-  try {
-    const url = `https://www.farmacialoreto.it/index.php?route=product/search&search=${encodeURIComponent(query)}`;
-    const res = await fetch(url, { headers: { "User-Agent": UA } });
-    if (!res.ok) return [];
-    const html = await res.text();
-
-    const results: ProductResult[] = [];
-    // Pattern: <a href="URL"><img src="IMG">...<strong>NAME</strong>...<span class="price-new">PRICE</span>
-    // Or simpler: grab product blocks between product-layout divs
-    const productBlocks = html.split(/class="product-layout/);
-    for (const block of productBlocks.slice(1)) {
-      try {
-        const nameMatch = block.match(/<h4[^>]*>\s*<a[^>]*href="([^"]*)"[^>]*>([^<]+)<\/a>/);
-        if (!nameMatch) continue;
-        const productUrl = nameMatch[1];
-        const name = nameMatch[2].trim();
-
-        // Price: look for price-new first, then price
-        let priceMatch = block.match(/class="price-new"[^>]*>([^<]+)</);
-        if (!priceMatch) priceMatch = block.match(/class="price"[^>]*>([^<]+)</);
-        if (!priceMatch) continue;
-        const price = parseItalianPrice(priceMatch[1]);
-
-        const imgMatch = block.match(/<img[^>]*src="([^"]*)"[^>]*>/);
-        const imageUrl = imgMatch ? imgMatch[1] : null;
-
-        results.push(buildProduct(name, price, productUrl, imageUrl));
-      } catch { /* skip malformed block */ }
-    }
-    return filterByQuery(results, query);
-  } catch (err) {
-    console.error("Loreto error:", err);
-    return [];
-  }
+  } catch (err) { console.error("Amicafarmacia error:", err); return []; }
 }
 
 // ============ FARMACIA IGEA (OpenCart HTML) ============
 async function scrapeIgea(query: string): Promise<ProductResult[]> {
   try {
     const url = `https://www.farmaciaigea.com/index.php?route=product/search&search=${encodeURIComponent(query)}`;
-    const res = await fetch(url, { headers: { "User-Agent": UA } });
+    const res = await fetch(url, { headers: { "User-Agent": UA }, redirect: "follow" });
     if (!res.ok) return [];
     const html = await res.text();
 
     const results: ProductResult[] = [];
-    const productBlocks = html.split(/class="product-layout/);
-    for (const block of productBlocks.slice(1)) {
+    // Split by caption blocks (each product has a caption div)
+    const captionBlocks = html.split(/class="caption"/);
+    for (const block of captionBlocks.slice(1)) {
       try {
+        // Product name and URL from h4 > a
         const nameMatch = block.match(/<h4[^>]*>\s*<a[^>]*href="([^"]*)"[^>]*>([^<]+)<\/a>/);
         if (!nameMatch) continue;
         const productUrl = nameMatch[1];
         const name = nameMatch[2].trim();
 
-        let priceMatch = block.match(/class="price-new"[^>]*>([^<]+)</);
-        if (!priceMatch) priceMatch = block.match(/class="price"[^>]*>([^<]+)</);
+        // Price from class="price" or class="price-new"
+        let priceMatch = block.match(/class="price-new"[^>]*>([^<]+)/);
+        if (!priceMatch) priceMatch = block.match(/class="price"[^>]*>\s*([^<]+)/);
         if (!priceMatch) continue;
         const price = parseItalianPrice(priceMatch[1]);
+        if (price <= 0) continue;
 
-        const imgMatch = block.match(/<img[^>]*src="([^"]*)"[^>]*>/);
-        const imageUrl = imgMatch ? imgMatch[1] : null;
-
-        results.push(buildProduct(name, price, productUrl, imageUrl));
+        // Image from preceding block (look backwards in full html) - skip for now
+        results.push(buildProduct(name, price, productUrl, null));
       } catch { /* skip malformed block */ }
     }
     return filterByQuery(results, query);
-  } catch (err) {
-    console.error("Igea error:", err);
-    return [];
-  }
-}
-
-// ============ DR. MAX (Nuxt SSR HTML) ============
-async function scrapeDrMax(query: string): Promise<ProductResult[]> {
-  try {
-    const url = `https://www.drmax.it/cerca?q=${encodeURIComponent(query)}`;
-    const res = await fetch(url, { headers: { "User-Agent": UA } });
-    if (!res.ok) return [];
-    const html = await res.text();
-
-    const results: ProductResult[] = [];
-    // Split by product tiles
-    const tiles = html.split(/class="tile tile--catalog"/);
-    for (const tile of tiles.slice(1)) {
-      try {
-        // Product name from tile__title
-        const nameMatch = tile.match(/class="tile__title"[^>]*>\s*([^<]+)/);
-        if (!nameMatch) continue;
-        const name = nameMatch[1].trim();
-
-        // Product URL
-        const urlMatch = tile.match(/class="tile__link"[^>]*href="([^"]+)"/);
-        if (!urlMatch) continue;
-        const productUrl = urlMatch[1];
-
-        // Current price from tile__price__value
-        const priceMatch = tile.match(/Prezzo attuale\s*<\/span>\s*([^<]*€)/);
-        if (!priceMatch) continue;
-        const price = parseItalianPrice(priceMatch[1]);
-
-        // Image
-        const imgMatch = tile.match(/<img[^>]*src="([^"]*)"[^>]*>/);
-        const imageUrl = imgMatch ? imgMatch[1] : null;
-
-        results.push(buildProduct(name, price, productUrl, imageUrl));
-      } catch { /* skip */ }
-    }
-    return filterByQuery(results, query);
-  } catch (err) {
-    console.error("DrMax error:", err);
-    return [];
-  }
+  } catch (err) { console.error("Igea error:", err); return []; }
 }
 
 // ============ PHARMACY REGISTRY ============
+// NOTE: Farmacia Loreto and Dr. Max are excluded because they block
+// server-side requests (connection timeout / Cloudflare challenge).
+// They can be re-added if API endpoints are found.
 interface PharmacyScraper {
   pharmacyName: string;
   scrape: (query: string) => Promise<ProductResult[]>;
@@ -271,9 +174,7 @@ const scrapers: PharmacyScraper[] = [
   { pharmacyName: "Farmae", scrape: scrapeFarmae },
   { pharmacyName: "eFarma", scrape: scrapeEfarma },
   { pharmacyName: "Amicafarmacia", scrape: scrapeAmicafarmacia },
-  { pharmacyName: "Farmacia Loreto", scrape: scrapeLoreto },
   { pharmacyName: "Farmacia Igea", scrape: scrapeIgea },
-  { pharmacyName: "Dr. Max", scrape: scrapeDrMax },
 ];
 
 // ============ MAIN HANDLER ============
