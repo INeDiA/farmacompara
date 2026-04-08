@@ -19,7 +19,7 @@ const Index = () => {
             <h1 className="text-xl font-bold tracking-tight">FarmaCompare</h1>
           </div>
           <span className="text-xs text-muted-foreground hidden sm:block">
-            Confronta i prezzi al mg dei farmaci online
+            Confronta il costo per grammo di principio attivo
           </span>
         </div>
       </header>
@@ -30,38 +30,37 @@ const Index = () => {
           <div className="text-center mb-10 space-y-6">
             <div className="space-y-3">
               <h2 className="text-3xl sm:text-4xl font-bold tracking-tight">
-                Il prezzo al{" "}
-                <span className="text-primary">milligrammo</span>
+                Quanto costa davvero
                 <br />
-                dei farmaci online
+                il tuo <span className="text-primary">farmaco</span>?
               </h2>
               <p className="text-muted-foreground max-w-lg mx-auto">
-                Confronta il reale costo dei farmaci come confronti il prezzo al
-                chilo al supermercato. Cerca per principio attivo e trova la vera
-                convenienza.
+                Confronta il costo per grammo di principio attivo tra diverse
+                farmacie online. Stessa molecola, confezioni diverse: scopri
+                quale conviene davvero.
               </p>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 max-w-2xl mx-auto mt-8">
               <div className="flex flex-col items-center gap-2 p-4 rounded-2xl bg-card border">
                 <TrendingDown className="h-6 w-6 text-primary" />
-                <p className="text-sm font-medium">Prezzo/mg</p>
+                <p className="text-sm font-medium">Prezzo/g</p>
                 <p className="text-xs text-muted-foreground text-center">
-                  Confronto reale per milligrammo di principio attivo
+                  Costo normalizzato per grammo di principio attivo
                 </p>
               </div>
               <div className="flex flex-col items-center gap-2 p-4 rounded-2xl bg-card border">
                 <Truck className="h-6 w-6 text-primary" />
-                <p className="text-sm font-medium">Spedizione inclusa</p>
+                <p className="text-sm font-medium">Spedizione</p>
                 <p className="text-xs text-muted-foreground text-center">
-                  Costi e soglie di spedizione gratuita sempre visibili
+                  Costo di spedizione sempre visibile nel confronto
                 </p>
               </div>
               <div className="flex flex-col items-center gap-2 p-4 rounded-2xl bg-card border">
                 <Shield className="h-6 w-6 text-primary" />
-                <p className="text-sm font-medium">6 farmacie</p>
+                <p className="text-sm font-medium">Farmacie online</p>
                 <p className="text-xs text-muted-foreground text-center">
-                  Farmacie autorizzate che spediscono in tutta Italia
+                  Risultati da diverse farmacie online che spediscono in Italia
                 </p>
               </div>
             </div>
