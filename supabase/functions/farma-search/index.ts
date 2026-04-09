@@ -21,7 +21,54 @@ interface ProductResult {
 
 // ============ HELPERS ============
 
+const TOPICAL_RE = /\b(gel|crema|cream|spray|unguento|schiuma|emulgel|pomata|lozione|soluzione\s*cutanea)\b/i;
+const PATCH_RE = /\b(cerott[oi]|cer\.?\s*med|patch|patches)\b/i;
+
+function isTopical(text: string): boolean {
+  return TOPICAL_RE.test(text) || PATCH_RE.test(text);
+}
+
+/**
+ * For topical products: extract total active ingredient in mg
+ * from percentage + weight/volume (e.g. "2% 100g" → 2000mg)
+ * For patches: extract mg per patch (e.g. "140mg 10 cerotti" → 140mg per unit)
+ */
+function extractTopicalTotalMg(text: string): { dosage_mg: number; quantity: number; total_mg: number } | null {
+  // Patches: look for mg per patch + count
+  if (PATCH_RE.test(text)) {
+    const mgMatch = text.match(/(\d+[.,]?\d*)\s*mg/i);
+    const qtyMatch = text.match(/(\d+)\s*(?:cerott[oi]|cer\.?\s*med|patch|patches)/i);
+    if (mgMatch && qtyMatch) {
+      const dosage = parseFloat(mgMatch[1].replace(",", "."));
+      const qty = parseInt(qtyMatch[1]);
+      return { dosage_mg: dosage, quantity: qty, total_mg: dosage * qty };
+    }
+    return null;
+  }
+
+  // Percentage-based: "2% 100g" or "1% 50ml"
+  const pctMatch = text.match(/(\d+[.,]?\d*)\s*%/);
+  if (!pctMatch) return null;
+  const pct = parseFloat(pctMatch[1].replace(",", "."));
+
+  const weightMatch = text.match(/(\d+[.,]?\d*)\s*(g|gr|ml)\b/i);
+  if (!weightMatch) return null;
+  const weight = parseFloat(weightMatch[1].replace(",", "."));
+
+  // pct% of weight grams = (pct/100) * weight * 1000 mg
+  const total_mg = (pct / 100) * weight * 1000;
+  return { dosage_mg: total_mg, quantity: 1, total_mg };
+}
+
 function extractDosageMg(text: string): number | null {
+  // Skip gram-weight capture for topicals (would catch tube weight)
+  if (isTopical(text)) {
+    // Only match explicit mg for topicals (used as fallback)
+    const mgMatch = text.match(/(\d+[.,]?\d*)\s*mg/i);
+    if (mgMatch) return parseFloat(mgMatch[1].replace(",", "."));
+    return null;
+  }
+
   const mgMatch = text.match(/(\d+[.,]?\d*)\s*mg/i);
   if (mgMatch) return parseFloat(mgMatch[1].replace(",", "."));
   const gMatch = text.match(/(\d+[.,]?\d*)\s*g(?:r)?(?:\b|$)/i);
@@ -31,7 +78,7 @@ function extractDosageMg(text: string): number | null {
 
 function extractQuantity(text: string): number | null {
   const patterns = [
-    /(\d+)\s*(?:compresse|cpr|capsule|cps|bustine|bust|buste|supposte|fiale|flaconi|tabs|tablets|sachets|granulato|conf|ovuli)/i,
+    /(\d+)\s*(?:compresse|cpr|cp\.?|com\.{0,2}|capsule|cps|cap\.?|caps\.?|bustine|bust\.?|buste|supposte|supp\.?|fiale|fl\.?|flaconi|tabs|tablets|sachets|granulato|conf|ovuli|cer\.?\s*med|cerott[oi]|patch|patches)/i,
     /x\s*(\d+)/i,
     /(\d+)\s*(?:pz|pezzi|unità)/i,
   ];
@@ -56,6 +103,15 @@ function parseItalianPrice(text: string): number {
 }
 
 function buildProduct(name: string, price: number, url: string | null, image: string | null): ProductResult {
+  // Try topical extraction first
+  if (isTopical(name)) {
+    const topical = extractTopicalTotalMg(name);
+    if (topical) {
+      const price_per_mg = topical.total_mg > 0 ? price / topical.total_mg : null;
+      return { name, price, dosage_mg: topical.dosage_mg, quantity: topical.quantity, total_mg: topical.total_mg, price_per_mg, product_url: url, image_url: image };
+    }
+  }
+
   const dosage = extractDosageMg(name);
   const qty = extractQuantity(name);
   const { total_mg, price_per_mg } = computePricePerMg(price, dosage, qty);
