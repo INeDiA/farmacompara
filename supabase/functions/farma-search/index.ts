@@ -333,20 +333,19 @@ async function checkRateLimit(supabase: any, ip: string): Promise<{ blocked: boo
     return { blocked: true, retryAfter };
   }
 
+  // INSERT FIRST, then count — prevents race condition
+  await supabase.from("rate_limits").insert({ ip_address: ip });
+
   const now = new Date();
   const oneMinuteAgo = new Date(now.getTime() - 60_000).toISOString();
   const oneHourAgo = new Date(now.getTime() - 3_600_000).toISOString();
 
-  // Count requests in last minute and last hour
   const [{ count: lastMinute }, { count: lastHour }] = await Promise.all([
     supabase.from("rate_limits").select("*", { count: "exact", head: true })
       .eq("ip_address", ip).gt("requested_at", oneMinuteAgo),
     supabase.from("rate_limits").select("*", { count: "exact", head: true })
       .eq("ip_address", ip).gt("requested_at", oneHourAgo),
   ]);
-
-  // Log the request
-  await supabase.from("rate_limits").insert({ ip_address: ip });
 
   // Progressive blocking
   let blockMinutes = 0;
