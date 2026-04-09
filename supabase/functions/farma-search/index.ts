@@ -127,44 +127,121 @@ async function scrapeAmicafarmacia(query: string): Promise<ProductResult[]> {
   } catch (err) { console.error("Amicafarmacia error:", err); return []; }
 }
 
-// ============ FARMACIA IGEA (OpenCart HTML) ============
-async function scrapeIgea(query: string): Promise<ProductResult[]> {
+// ============ OPENCART (generic HTML scraper) ============
+async function scrapeOpenCart(baseUrl: string, query: string): Promise<ProductResult[]> {
   try {
-    const url = `https://www.farmaciaigea.com/index.php?route=product/search&search=${encodeURIComponent(query)}`;
+    const url = `${baseUrl}/index.php?route=product/search&search=${encodeURIComponent(query)}`;
     const res = await fetch(url, { headers: { "User-Agent": UA }, redirect: "follow" });
     if (!res.ok) return [];
     const html = await res.text();
 
     const results: ProductResult[] = [];
-    // Split by caption blocks (each product has a caption div)
     const captionBlocks = html.split(/class="caption"/);
     for (const block of captionBlocks.slice(1)) {
       try {
-        // Product name and URL from h4 > a
         const nameMatch = block.match(/<h4[^>]*>\s*<a[^>]*href="([^"]*)"[^>]*>([^<]+)<\/a>/);
         if (!nameMatch) continue;
         const productUrl = nameMatch[1];
         const name = nameMatch[2].trim();
 
-        // Price from class="price" or class="price-new"
         let priceMatch = block.match(/class="price-new"[^>]*>([^<]+)/);
         if (!priceMatch) priceMatch = block.match(/class="price"[^>]*>\s*([^<]+)/);
         if (!priceMatch) continue;
         const price = parseItalianPrice(priceMatch[1]);
         if (price <= 0) continue;
 
-        // Image from preceding block (look backwards in full html) - skip for now
         results.push(buildProduct(name, price, productUrl, null));
       } catch { /* skip malformed block */ }
     }
     return filterByQuery(results, query);
-  } catch (err) { console.error("Igea error:", err); return []; }
+  } catch (err) { console.error(`OpenCart scrape error (${baseUrl}):`, err); return []; }
+}
+
+// ============ 1000FARMACIE (Algolia) ============
+async function scrape1000Farmacie(query: string): Promise<ProductResult[]> {
+  try {
+    const res = await fetch(
+      "https://hw3t8wvs73-dsn.algolia.net/1/indexes/Product/query",
+      {
+        method: "POST",
+        headers: {
+          "x-algolia-application-id": "HW3T8WVS73",
+          "x-algolia-api-key": "a44069a5116559934332f93aa82d91d8",
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ query, hitsPerPage: 20 }),
+      }
+    );
+    if (!res.ok) return [];
+    const data = await res.json();
+    return filterByQuery(
+      (data?.hits || []).map((h: any) => {
+        const name = h.name || h.title || "";
+        const price = typeof h.price === "number" ? h.price : parseFloat(h.price) || 0;
+        const productUrl = h.url || h.slug ? `https://1000farmacie.it${h.url || h.slug}` : null;
+        const image = h.image_url || h.image || h.thumbnail || null;
+        return buildProduct(name, price, productUrl, image);
+      }), query,
+    );
+  } catch (err) { console.error("1000Farmacie error:", err); return []; }
+}
+
+// ============ FARMAEUROPE (Magento autocomplete) ============
+async function scrapeFarmaeurope(query: string): Promise<ProductResult[]> {
+  try {
+    const url = `https://www.farmaeurope.eu/searchautocomplete/ajax/suggest/?q=${encodeURIComponent(query)}&store_id=4`;
+    const res = await fetch(url, { headers: { "User-Agent": UA, "X-Requested-With": "XMLHttpRequest" } });
+    if (!res.ok) return [];
+    const data = await res.json();
+    const items = Array.isArray(data) ? data : (data?.results || data?.items || []);
+    return filterByQuery(
+      items.map((item: any) => {
+        const name = item.name || item.title || "";
+        // Price can be in data-price-amount attribute within HTML or plain text
+        let price = 0;
+        if (item.price) {
+          const priceAmountMatch = String(item.price).match(/data-price-amount="([^"]+)"/);
+          if (priceAmountMatch) {
+            price = parseFloat(priceAmountMatch[1]) || 0;
+          } else {
+            price = parseItalianPrice(String(item.price));
+          }
+        }
+        const productUrl = item.url || null;
+        const image = item.imageUrl || item.image || item.thumbnail || null;
+        return buildProduct(name, price, productUrl, image);
+      }), query,
+    );
+  } catch (err) { console.error("Farmaeurope error:", err); return []; }
+}
+
+// ============ FARMACIA UNO (Seken.ai) ============
+async function scrapeFarmaciaUno(query: string): Promise<ProductResult[]> {
+  try {
+    const res = await fetch("https://open.seken.ai/api/search", {
+      method: "POST",
+      headers: {
+        "Authorization": "Bearer b412b9e78e0e28d4ac7935779888de72:5e27deb5ae00268c0bec330e754cb04e",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ query, limit: 20 }),
+    });
+    if (!res.ok) return [];
+    const data = await res.json();
+    const items = data?.results || data?.products || data?.hits || [];
+    return filterByQuery(
+      items.map((item: any) => {
+        const name = item.name || item.title || "";
+        const price = typeof item.price === "number" ? item.price : parseFloat(item.price) || 0;
+        const productUrl = item.url ? (item.url.startsWith("http") ? item.url : `https://farmaciauno.it${item.url}`) : null;
+        const image = item.image_url || item.image || item.thumbnail || null;
+        return buildProduct(name, price, productUrl, image);
+      }), query,
+    );
+  } catch (err) { console.error("Farmacia Uno error:", err); return []; }
 }
 
 // ============ PHARMACY REGISTRY ============
-// NOTE: Farmacia Loreto and Dr. Max are excluded because they block
-// server-side requests (connection timeout / Cloudflare challenge).
-// They can be re-added if API endpoints are found.
 interface PharmacyScraper {
   pharmacyName: string;
   scrape: (query: string) => Promise<ProductResult[]>;
@@ -174,7 +251,13 @@ const scrapers: PharmacyScraper[] = [
   { pharmacyName: "Farmae", scrape: scrapeFarmae },
   { pharmacyName: "eFarma", scrape: scrapeEfarma },
   { pharmacyName: "Amicafarmacia", scrape: scrapeAmicafarmacia },
-  { pharmacyName: "Farmacia Igea", scrape: scrapeIgea },
+  { pharmacyName: "Farmacia Igea", scrape: (q) => scrapeOpenCart("https://www.farmaciaigea.com", q) },
+  { pharmacyName: "Farmacia Gaudiana", scrape: (q) => scrapeOpenCart("https://farmaciagaudiana.it", q) },
+  { pharmacyName: "Farmacia Guacci", scrape: (q) => scrapeOpenCart("https://farmaciaguacci.it", q) },
+  { pharmacyName: "Farmacia del Corso", scrape: (q) => scrapeOpenCart("https://farmaciadelcorso.net", q) },
+  { pharmacyName: "1000Farmacie", scrape: scrape1000Farmacie },
+  { pharmacyName: "Farmaeurope", scrape: scrapeFarmaeurope },
+  { pharmacyName: "Farmacia Uno", scrape: scrapeFarmaciaUno },
 ];
 
 // ============ MAIN HANDLER ============
