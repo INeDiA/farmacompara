@@ -1,18 +1,24 @@
 
 
-## Piano: Aggiungere parametri UTM ai link in uscita
+## Piano: Escludere i parametri UTM per Farmacia Guacci
 
-### Cosa cambia
+### Problema
+Gli URL di Farmacia Guacci (basati su OpenCart) non gestiscono bene i parametri UTM aggiunti in coda, causando problemi di navigazione.
+
+### Soluzione
 
 **File: `src/components/ResultsTable.tsx`**
 
-1. Aggiungere una funzione helper `addUtmParams(url, activeIngredient)` che appende i parametri UTM:
-   - `utm_source=farmacompara`
-   - `utm_medium=referral`
-   - `utm_campaign=confronto_prezzi`
-   - `utm_content={activeIngredient}` (codificato con `encodeURIComponent`)
+Modificare la funzione `addUtmParams` per escludere gli URL che contengono `farmaciaguacci.it`, restituendo l'URL originale senza modifiche:
 
-2. Applicarla ai due link `<a href=...>` esistenti (mobile ~riga 104, desktop ~riga 176), sostituendo `p.product_url` con `addUtmParams(p.product_url, p.active_ingredient)`.
+```typescript
+function addUtmParams(url: string, activeIngredient: string): string {
+  // Guacci non gestisce bene parametri extra
+  if (url.includes("farmaciaguacci.it")) return url;
+  const separator = url.includes("?") ? "&" : "?";
+  return `${url}${separator}utm_source=farmacompara&utm_medium=referral&utm_campaign=confronto_prezzi&utm_content=${encodeURIComponent(activeIngredient)}`;
+}
+```
 
-Nessuna modifica ad altri file.
+Una sola riga aggiunta, nessun altro file modificato.
 
