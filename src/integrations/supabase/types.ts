@@ -103,6 +103,27 @@ export type Database = {
           },
         ]
       }
+      rate_limits: {
+        Row: {
+          blocked_until: string | null
+          id: string
+          ip_address: string
+          requested_at: string
+        }
+        Insert: {
+          blocked_until?: string | null
+          id?: string
+          ip_address: string
+          requested_at?: string
+        }
+        Update: {
+          blocked_until?: string | null
+          id?: string
+          ip_address?: string
+          requested_at?: string
+        }
+        Relationships: []
+      }
       search_cache: {
         Row: {
           expires_at: string
