@@ -1,24 +1,18 @@
 
 
-# Fix race condition nel rate limiter
+## Piano: Aggiungere parametri UTM ai link in uscita
 
-## Problema trovato
-Il rate limiter attuale ha una **race condition**: il conteggio e l'insert non sono atomici. Se 100 richieste arrivano nello stesso istante, tutte leggono "0 richieste precedenti" e passano tutte prima che qualsiasi blocco scatti.
+### Cosa cambia
 
-## Soluzione
-Invertire l'ordine: **prima inserire** la riga in `rate_limits`, **poi contare**. Così anche richieste simultanee vedranno il conteggio crescere. Inoltre, spostare il check del rate limit **prima dello scraping**, così le richieste bloccate non consumano risorse.
+**File: `src/components/ResultsTable.tsx`**
 
-### Modifiche in `supabase/functions/farma-search/index.ts`
+1. Aggiungere una funzione helper `addUtmParams(url, activeIngredient)` che appende i parametri UTM:
+   - `utm_source=farmacompara`
+   - `utm_medium=referral`
+   - `utm_campaign=confronto_prezzi`
+   - `utm_content={activeIngredient}` (codificato con `encodeURIComponent`)
 
-Nella funzione `checkRateLimit`:
+2. Applicarla ai due link `<a href=...>` esistenti (mobile ~riga 104, desktop ~riga 176), sostituendo `p.product_url` con `addUtmParams(p.product_url, p.active_ingredient)`.
 
-1. **Prima** inserire la riga (`INSERT` con IP + timestamp)
-2. **Poi** contare le richieste nell'ultimo minuto e nell'ultima ora
-3. Se il conteggio supera le soglie → inserire il `blocked_until` e restituire `blocked: true`
-
-Questo ordine garantisce che richieste concorrenti vedano i reciproci insert e il conteggio sia realistico.
-
-### Nessuna altra modifica
-- Il frontend gestisce già il 429
-- La tabella `rate_limits` ha già la struttura corretta
+Nessuna modifica ad altri file.
 
