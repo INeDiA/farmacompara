@@ -33,6 +33,7 @@ function formatShipping(pharmacy: ProductWithPharmacy["pharmacies"]): string {
 }
 
 function addUtmParams(url: string, activeIngredient: string): string {
+  if (url.includes("farmaciaguacci.it")) return url;
   const separator = url.includes("?") ? "&" : "?";
   return `${url}${separator}utm_source=farmacompara&utm_medium=referral&utm_campaign=confronto_prezzi&utm_content=${encodeURIComponent(activeIngredient)}`;
 }
