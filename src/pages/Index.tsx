@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 
 
-const isPreview = typeof window !== "undefined" && (window.location.hostname.includes("lovable.app") || window.location.hostname.includes("lovableproject.com"));
+const isPreview = typeof window !== "undefined" && (window.location.hostname.includes("lovable.dev") || window.location.hostname.includes("lovableproject.com"));
 
 const Index = () => {
   const { results, loading, error, search } = useFarmaSearch();
