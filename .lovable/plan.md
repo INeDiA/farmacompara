@@ -1,40 +1,31 @@
 
 
-# Miglioramento parsing dosaggio e quantità
+# Protezione endpoint `clear_cache=all`
 
-## Problemi identificati
+## Approccio
+Usare un **secret condiviso** (un token admin) salvato come secret nella Edge Function e passato dal frontend come header. Solo chi conosce il token può svuotare la cache.
 
-| Problema | Esempio | Causa |
-|----------|---------|-------|
-| Quantità non riconosciuta da nomi troncati | `PARACETAMOLO 500mg 20 Com..` | Il regex non gestisce abbreviazioni OpenCart (`Com..`, `Cer.Med`, `Cp.`) |
-| Dosaggio assente nei nomi commerciali | `VoltadvanceGo Diclofenac 20 Capsule` | Farmae/Amicafarmacia omettono i mg dal titolo |
-| Prodotti topici (gel/spray/unguenti) | `Voltaren Emulgel 2% 100g` | Dosaggio espresso come % + volume, non come mg + unità |
-| Dosaggio errato per i topici | `DICLOFENAC Gel 1% 50g` → 50.000mg | Il regex `\d+g` cattura il peso del tubo come dosaggio |
+## Modifiche
 
-## Piano di intervento
+### 1. Aggiungere un secret `ADMIN_TOKEN`
+- Generare un token casuale (es. UUID) e salvarlo con il tool `add_secret`
+- La Edge Function lo legge da `Deno.env.get("ADMIN_TOKEN")`
 
-### 1. Ampliare i pattern di quantità in `extractQuantity`
-Aggiungere abbreviazioni troncate comuni:
-- `Com..`, `Cpr`, `Cp.`, `Cp`, `Cap`, `Caps`, `Bust.`, `Cer.Med`, `Fl`, `Supp`
-- Pattern numerico prima di abbreviazione: `20Com..` → 20, `5Cer.Med` → 5
+### 2. `supabase/functions/farma-search/index.ts`
+- All'inizio del handler, se `clear_cache=all` è presente:
+  - Verificare l'header `Authorization: Bearer <ADMIN_TOKEN>`
+  - Se il token non corrisponde → risposta 403
+  - Se corrisponde → eseguire DELETE su `search_cache` e `products`, restituire conferma
 
-### 2. Gestire prodotti topici (gel, creme, spray, unguenti)
-Nuova logica: se il nome contiene `gel|crema|spray|unguento|schiuma|emulgel|cerotto`:
-- Estrarre la **percentuale** (`2%`, `1%`, `0,16%`)
-- Estrarre il **peso/volume** (`100g`, `50ml`, `15ml`)
-- Calcolare: principio attivo = percentuale × peso (es. 2% × 100g = 2g = 2000mg)
-- Per i cerotti: estrarre mg per cerotto e numero di cerotti
+### 3. `src/pages/Index.tsx`
+- Bottone fisso in basso a destra, visibile solo su `lovable.app`
+- Al click, chiama la Edge Function con `?clear_cache=all` e header `Authorization: Bearer <token>`
+- Il token è hardcoded nel frontend (accettabile perché il bottone è visibile solo in preview e il token protegge comunque l'endpoint in produzione)
+- Toast di conferma/errore
 
-### 3. Migliorare `extractDosageMg` per evitare falsi positivi
-- Se il prodotto è un topico, **non** catturare il peso del tubo come dosaggio
-- Dare priorità al pattern "percentuale + peso" rispetto al pattern "Xg" generico
+### Alternativa più sicura (senza token nel frontend)
+Invece di hardcodare il token, il bottone può chiedere all'utente di inserire il token in un prompt. Così anche se qualcuno ispeziona il JS della preview, non trova il token.
 
-### 4. Nessuna modifica al frontend o al database
-I campi `dosage_mg`, `quantity`, `total_mg`, `price_per_mg` restano gli stessi — migliora solo la qualità del parsing nella Edge Function.
-
-## File modificato
-- `supabase/functions/farma-search/index.ts`: funzioni `extractDosageMg`, `extractQuantity`, e nuova funzione `extractTopicalDosage`
-
-## Impatto stimato
-Con queste modifiche, la maggior parte dei prodotti orali troncati e dei prodotti topici dovrebbe ottenere un `price_per_mg` valido, riducendo significativamente i risultati senza costo al grammo.
+## Raccomandazione
+Uso il **prompt di input** al primo click: il bottone chiede il token admin, lo salva in sessionStorage per la sessione corrente. Più sicuro senza complicare l'UX.
 
