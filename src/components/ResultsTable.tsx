@@ -32,10 +32,20 @@ function formatShipping(pharmacy: ProductWithPharmacy["pharmacies"]): string {
   return formatPrice(pharmacy.shipping_cost);
 }
 
+function stripSearchParam(url: string): string {
+  try {
+    const u = new URL(url);
+    u.searchParams.delete("search");
+    return u.toString();
+  } catch {
+    return url;
+  }
+}
+
 function addUtmParams(url: string, activeIngredient: string): string {
-  if (url.includes("farmaciaguacci.it")) return url;
-  const separator = url.includes("?") ? "&" : "?";
-  return `${url}${separator}utm_source=farmacompara&utm_medium=referral&utm_campaign=confronto_prezzi&utm_content=${encodeURIComponent(activeIngredient)}`;
+  const cleaned = stripSearchParam(url);
+  const separator = cleaned.includes("?") ? "&" : "?";
+  return `${cleaned}${separator}utm_source=farmacompara&utm_medium=referral&utm_campaign=confronto_prezzi&utm_content=${encodeURIComponent(activeIngredient)}`;
 }
 
 export function ResultsTable({ products, fromCache }: ResultsTableProps) {
