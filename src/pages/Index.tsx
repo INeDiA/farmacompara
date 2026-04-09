@@ -11,7 +11,7 @@ import { toast } from "sonner";
 const isPreview = typeof window !== "undefined" && (window.location.hostname.includes("lovable.dev") || window.location.hostname.includes("lovableproject.com"));
 
 const Index = () => {
-  const { results, loading, error, search } = useFarmaSearch();
+  const { results, loading, error, search, reset } = useFarmaSearch();
   const [clearing, setClearing] = useState(false);
 
   const handleClearCache = async () => {
@@ -49,7 +49,7 @@ const Index = () => {
       <header className="border-b bg-card/80 backdrop-blur-sm sticky top-0 z-10">
         <div className="container mx-auto px-4 py-3 flex items-center gap-3">
           <button
-            onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
+            onClick={() => { reset(); window.scrollTo({ top: 0, behavior: "smooth" }); }}
             className="flex items-center gap-2 cursor-pointer hover:opacity-80 transition-opacity"
           >
             <div className="h-9 w-9 rounded-xl bg-primary flex items-center justify-center">
