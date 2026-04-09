@@ -6,7 +6,7 @@ import { LoadingSkeleton } from "@/components/LoadingSkeleton";
 import { useFarmaSearch } from "@/hooks/useFarmaSearch";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
+
 
 const isPreview = typeof window !== "undefined" && window.location.hostname.includes("lovable.app");
 
