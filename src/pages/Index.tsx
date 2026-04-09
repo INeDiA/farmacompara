@@ -1,12 +1,57 @@
-import { Pill, TrendingDown, Shield, Truck } from "lucide-react";
+import { useState } from "react";
+import { Pill, TrendingDown, Shield, Truck, Trash2 } from "lucide-react";
 import { SearchBar } from "@/components/SearchBar";
 import { ResultsTable } from "@/components/ResultsTable";
 import { LoadingSkeleton } from "@/components/LoadingSkeleton";
 import { useFarmaSearch } from "@/hooks/useFarmaSearch";
+import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
+
+const isPreview = typeof window !== "undefined" && window.location.hostname.includes("lovable.app");
 
 const Index = () => {
   const { results, loading, error, search } = useFarmaSearch();
+  const [clearing, setClearing] = useState(false);
 
+  const handleClearCache = async () => {
+    let token = sessionStorage.getItem("admin_token");
+    if (!token) {
+      token = prompt("Inserisci il token admin:");
+      if (!token) return;
+      sessionStorage.setItem("admin_token", token);
+    }
+    setClearing(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("farma-search", {
+        method: "GET",
+        headers: { Authorization: `Bearer ${token}` },
+        body: undefined,
+      });
+      // supabase.functions.invoke doesn't support query params well, use fetch directly
+    } catch {}
+    // Use fetch directly for query param support
+    try {
+      const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/farma-search?clear_cache=all`;
+      const res = await fetch(url, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+        },
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        toast.success(`Cache svuotata: ${data.deleted_cache} cache, ${data.deleted_products} prodotti eliminati`);
+      } else {
+        sessionStorage.removeItem("admin_token");
+        toast.error(data.error || "Errore nella pulizia della cache");
+      }
+    } catch (err) {
+      toast.error("Errore di rete");
+    } finally {
+      setClearing(false);
+    }
+  };
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
