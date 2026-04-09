@@ -324,6 +324,28 @@ Deno.serve(async (req) => {
 
   try {
     const url = new URL(req.url);
+
+    // ============ CLEAR CACHE (admin only) ============
+    if (url.searchParams.get("clear_cache") === "all") {
+      const adminToken = Deno.env.get("ADMIN_TOKEN");
+      const authHeader = req.headers.get("Authorization");
+      if (!adminToken || authHeader !== `Bearer ${adminToken}`) {
+        return new Response(
+          JSON.stringify({ error: "Non autorizzato" }),
+          { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+      const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+      const supabase = createClient(supabaseUrl, supabaseKey);
+      const { count: cacheCount } = await supabase.from("search_cache").delete().neq("id", "00000000-0000-0000-0000-000000000000").select("*", { count: "exact", head: true });
+      const { count: productCount } = await supabase.from("products").delete().neq("id", "00000000-0000-0000-0000-000000000000").select("*", { count: "exact", head: true });
+      return new Response(
+        JSON.stringify({ success: true, deleted_cache: cacheCount || 0, deleted_products: productCount || 0 }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     const query = url.searchParams.get("q")?.trim().toLowerCase();
 
     if (!query || query.length < 2) {
