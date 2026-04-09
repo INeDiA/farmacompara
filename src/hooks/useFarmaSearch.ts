@@ -58,6 +58,10 @@ export function useFarmaSearch() {
 
       if (!response.ok) {
         const err = await response.json();
+        if (response.status === 429) {
+          const retryMin = Math.ceil((err.retry_after || 60) / 60);
+          throw new Error(`Troppe ricerche. Riprova tra ${retryMin} minut${retryMin === 1 ? 'o' : 'i'}.`);
+        }
         throw new Error(err.error || "Errore nella ricerca");
       }
 
