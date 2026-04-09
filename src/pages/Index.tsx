@@ -57,9 +57,6 @@ const Index = () => {
             </div>
             <h1 className="text-xl font-bold tracking-tight">FarmaCompara</h1>
           </button>
-          <span className="text-xs text-muted-foreground hidden sm:block">
-            Confronta il costo per grammo di principio attivo
-          </span>
         </div>
       </header>
 
