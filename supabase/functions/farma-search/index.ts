@@ -316,6 +316,66 @@ const scrapers: PharmacyScraper[] = [
   { pharmacyName: "Farmacia Uno", scrape: scrapeFarmaciaUno },
 ];
 
+// ============ RATE LIMITING ============
+async function checkRateLimit(supabase: any, ip: string): Promise<{ blocked: boolean; retryAfter?: number }> {
+  // Check if IP is currently blocked
+  const { data: blocked } = await supabase
+    .from("rate_limits")
+    .select("blocked_until")
+    .eq("ip_address", ip)
+    .gt("blocked_until", new Date().toISOString())
+    .order("blocked_until", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (blocked?.blocked_until) {
+    const retryAfter = Math.ceil((new Date(blocked.blocked_until).getTime() - Date.now()) / 1000);
+    return { blocked: true, retryAfter };
+  }
+
+  const now = new Date();
+  const oneMinuteAgo = new Date(now.getTime() - 60_000).toISOString();
+  const oneHourAgo = new Date(now.getTime() - 3_600_000).toISOString();
+
+  // Count requests in last minute and last hour
+  const [{ count: lastMinute }, { count: lastHour }] = await Promise.all([
+    supabase.from("rate_limits").select("*", { count: "exact", head: true })
+      .eq("ip_address", ip).gt("requested_at", oneMinuteAgo),
+    supabase.from("rate_limits").select("*", { count: "exact", head: true })
+      .eq("ip_address", ip).gt("requested_at", oneHourAgo),
+  ]);
+
+  // Log the request
+  await supabase.from("rate_limits").insert({ ip_address: ip });
+
+  // Progressive blocking
+  let blockMinutes = 0;
+  if ((lastHour || 0) > 50) blockMinutes = 1440; // 24h ban
+  else if ((lastHour || 0) > 20) blockMinutes = 30;
+  else if ((lastMinute || 0) > 10) blockMinutes = 5;
+
+  if (blockMinutes > 0) {
+    const blockedUntil = new Date(now.getTime() + blockMinutes * 60_000).toISOString();
+    await supabase.from("rate_limits").insert({ ip_address: ip, blocked_until: blockedUntil });
+    return { blocked: true, retryAfter: blockMinutes * 60 };
+  }
+
+  // Cleanup old entries (1 in 50 chance)
+  if (Math.random() < 0.02) {
+    const oneDayAgo = new Date(now.getTime() - 86_400_000).toISOString();
+    await supabase.from("rate_limits").delete().lt("requested_at", oneDayAgo).is("blocked_until", null);
+    await supabase.from("rate_limits").delete().lt("blocked_until", now.toISOString());
+  }
+
+  return { blocked: false };
+}
+
+function getClientIp(req: Request): string {
+  return req.headers.get("x-forwarded-for")?.split(",")[0]?.trim()
+    || req.headers.get("cf-connecting-ip")
+    || "unknown";
+}
+
 // ============ MAIN HANDLER ============
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
