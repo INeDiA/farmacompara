@@ -105,7 +105,7 @@ const Index = () => {
         )}
 
         {/* Search */}
-        <SearchBar onSearch={search} loading={loading} />
+        <SearchBar key={searchKey} onSearch={search} loading={loading} />
 
         {/* Error */}
         {error && (
