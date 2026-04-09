@@ -149,6 +149,20 @@ const Index = () => {
           </p>
         </div>
       </footer>
+
+      {/* Admin: clear cache button (preview only) */}
+      {isPreview && (
+        <Button
+          variant="destructive"
+          size="sm"
+          className="fixed bottom-4 right-4 z-50 opacity-70 hover:opacity-100"
+          onClick={handleClearCache}
+          disabled={clearing}
+        >
+          <Trash2 className="h-4 w-4 mr-1" />
+          {clearing ? "Svuoto..." : "Svuota Cache"}
+        </Button>
+      )}
     </div>
   );
 };
