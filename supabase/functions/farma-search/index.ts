@@ -419,6 +419,16 @@ Deno.serve(async (req) => {
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
+    // Rate limiting
+    const clientIp = getClientIp(req);
+    const rateCheck = await checkRateLimit(supabase, clientIp);
+    if (rateCheck.blocked) {
+      return new Response(
+        JSON.stringify({ error: "Troppe ricerche. Riprova più tardi.", retry_after: rateCheck.retryAfter }),
+        { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json", "Retry-After": String(rateCheck.retryAfter || 60) } }
+      );
+    }
+
     // Check cache
     const { data: cache } = await supabase
       .from("search_cache")
