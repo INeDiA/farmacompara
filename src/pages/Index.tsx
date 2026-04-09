@@ -16,7 +16,7 @@ const Index = () => {
             <div className="h-9 w-9 rounded-xl bg-primary flex items-center justify-center">
               <Pill className="h-5 w-5 text-primary-foreground" />
             </div>
-            <h1 className="text-xl font-bold tracking-tight">FarmaCompare</h1>
+            <h1 className="text-xl font-bold tracking-tight">FarmaCompara</h1>
           </div>
           <span className="text-xs text-muted-foreground hidden sm:block">
             Confronta il costo per grammo di principio attivo
@@ -96,7 +96,7 @@ const Index = () => {
       <footer className="border-t mt-auto">
         <div className="container mx-auto px-4 py-6 text-center text-xs text-muted-foreground space-y-1">
           <p>
-            FarmaCompare — confronto prezzi farmaci online italiani
+            FarmaCompara — confronto prezzi farmaci online italiani
           </p>
           <p>
             I prezzi mostrati sono indicativi e aggiornati ogni 24 ore. Verifica
