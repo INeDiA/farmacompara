@@ -74,5 +74,7 @@ export function useFarmaSearch() {
     }
   };
 
-  return { results, loading, error, search };
+  const reset = () => { setResults(null); setError(null); };
+
+  return { results, loading, error, search, reset };
 }
