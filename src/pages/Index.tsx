@@ -23,15 +23,6 @@ const Index = () => {
     }
     setClearing(true);
     try {
-      const { data, error } = await supabase.functions.invoke("farma-search", {
-        method: "GET",
-        headers: { Authorization: `Bearer ${token}` },
-        body: undefined,
-      });
-      // supabase.functions.invoke doesn't support query params well, use fetch directly
-    } catch {}
-    // Use fetch directly for query param support
-    try {
       const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/farma-search?clear_cache=all`;
       const res = await fetch(url, {
         headers: {
