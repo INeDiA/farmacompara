@@ -32,6 +32,11 @@ function formatShipping(pharmacy: ProductWithPharmacy["pharmacies"]): string {
   return formatPrice(pharmacy.shipping_cost);
 }
 
+function addUtmParams(url: string, activeIngredient: string): string {
+  const separator = url.includes("?") ? "&" : "?";
+  return `${url}${separator}utm_source=farmacompara&utm_medium=referral&utm_campaign=confronto_prezzi&utm_content=${encodeURIComponent(activeIngredient)}`;
+}
+
 export function ResultsTable({ products, fromCache }: ResultsTableProps) {
   if (products.length === 0) {
     return (
@@ -101,7 +106,7 @@ export function ResultsTable({ products, fromCache }: ResultsTableProps) {
                 </span>
                 {p.product_url && (
                   <a
-                    href={p.product_url}
+                    href={addUtmParams(p.product_url, p.active_ingredient)}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="text-primary hover:underline flex items-center gap-1"
@@ -173,7 +178,7 @@ export function ResultsTable({ products, fromCache }: ResultsTableProps) {
                 <TableCell>
                   {p.product_url && (
                     <a
-                      href={p.product_url}
+                      href={addUtmParams(p.product_url, p.active_ingredient)}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="text-primary hover:text-primary/80"
