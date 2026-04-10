@@ -12,7 +12,6 @@ const Search = () => {
   const navigate = useNavigate();
   const query = rawQuery ? fromSlug(rawQuery) : "";
   const { results, loading, error, search, reset } = useFarmaSearch();
-  const [hasSearched, setHasSearched] = useState(false);
 
   // Helper to set or create a meta tag
   const setMeta = (attr: string, value: string, content: string) => {
@@ -146,13 +145,12 @@ const Search = () => {
     };
   }, [query, rawQuery]);
 
-  // Auto-search on mount
+  // Auto-search when query changes
   useEffect(() => {
-    if (query && !hasSearched) {
-      setHasSearched(true);
+    if (query) {
       search(query);
     }
-  }, [query, hasSearched, search]);
+  }, [query]);
 
   const handleSearch = (q: string) => {
     navigate(`/cerca/${encodeURIComponent(q.toLowerCase())}`, { replace: true });
