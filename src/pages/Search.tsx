@@ -29,8 +29,8 @@ const Search = () => {
   useEffect(() => {
     if (query) {
       const capitalized = query.charAt(0).toUpperCase() + query.slice(1);
-      const pageTitle = `${capitalized}: confronta prezzi tra farmacie online | FarmaCompara`;
-      const pageDesc = `Confronta il prezzo per grammo di ${capitalized} tra diverse farmacie online italiane. Trova la confezione più conveniente.`;
+      const pageTitle = `${capitalized}: confronta prezzi farmacie online | FarmaCompara`;
+      const pageDesc = `Confronta il prezzo di ${capitalized} tra diverse farmacie online italiane. Trova la confezione più conveniente e risparmia sul tuo acquisto.`;
       const pageUrl = `https://farmacompara.it/cerca/${rawQuery}`;
 
       document.title = pageTitle;
