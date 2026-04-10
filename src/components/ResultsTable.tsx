@@ -67,7 +67,7 @@ export function ResultsTable({ products, fromCache }: ResultsTableProps) {
         <h2 className="text-xl font-semibold">
           {products.length} prodott{products.length === 1 ? "o" : "i"} trovat{products.length === 1 ? "o" : "i"}
         </h2>
-        {fromCache && (
+        {fromCache && (typeof window !== "undefined" && (window.location.hostname.includes("lovable.dev") || window.location.hostname.includes("lovableproject.com"))) && (
           <Badge variant="secondary" className="text-xs">
             📦 Risultati dalla cache
           </Badge>
