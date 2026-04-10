@@ -60,7 +60,7 @@ const Search = () => {
       if (canonical) canonical.remove();
       // Restore homepage OG/Twitter
       const homeName = "FarmaCompara — Confronta i prezzi dei farmaci online in Italia";
-      const homeDesc = "Confronta il costo reale dei farmaci tra diverse farmacie online, scopri il più conveniente!";
+      const homeDesc = "Confronta il costo reale dei farmaci tra diverse farmacie online italiane. Prezzo normalizzato per grammo di principio attivo, spedizione inclusa nel confronto.";
       setMeta("property", "og:title", homeName);
       setMeta("property", "og:description", homeDesc);
       setMeta("property", "og:url", "https://farmacompara.it/");
