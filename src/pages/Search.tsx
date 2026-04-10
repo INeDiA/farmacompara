@@ -109,6 +109,17 @@ const Search = () => {
       <main className="container mx-auto px-4 py-8">
         <SearchBar onSearch={handleSearch} loading={loading} initialQuery={query} />
 
+        {query && (
+          <div className="mt-6">
+            <h1 className="text-2xl font-bold tracking-tight">
+              {query.charAt(0).toUpperCase() + query.slice(1)}
+            </h1>
+            <p className="text-muted-foreground mt-1">
+              Confronta il prezzo al grammo di {query.charAt(0).toUpperCase() + query.slice(1)} tra le farmacie online italiane e trova la confezione più conveniente.
+            </p>
+          </div>
+        )}
+
         {error && (
           <div className="mt-6 p-4 rounded-xl bg-destructive/10 border border-destructive/20 text-center">
             <p className="text-destructive font-medium">{error}</p>
