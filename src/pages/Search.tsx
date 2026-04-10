@@ -14,28 +14,58 @@ const Search = () => {
   const { results, loading, error, search, reset } = useFarmaSearch();
   const [hasSearched, setHasSearched] = useState(false);
 
-  // Set document title, meta, and canonical
+  // Helper to set or create a meta tag
+  const setMeta = (attr: string, value: string, content: string) => {
+    let el = document.querySelector(`meta[${attr}="${value}"]`);
+    if (!el) {
+      el = document.createElement("meta");
+      el.setAttribute(attr.split("=")[0], value);
+      document.head.appendChild(el);
+    }
+    el.setAttribute("content", content);
+  };
+
+  // Set document title, meta, canonical, OG & Twitter
   useEffect(() => {
     if (query) {
       const capitalized = query.charAt(0).toUpperCase() + query.slice(1);
-      document.title = `${capitalized}: confronta prezzi e trova il più conveniente | FarmaCompara`;
-      const meta = document.querySelector('meta[name="description"]');
-      if (meta) {
-        meta.setAttribute("content", `Confronta il prezzo per grammo di ${capitalized} tra diverse farmacie online italiane. Trova la confezione più conveniente.`);
-      }
-      // Canonical tag
+      const pageTitle = `${capitalized}: confronta prezzi e trova il più conveniente | FarmaCompara`;
+      const pageDesc = `Confronta il prezzo per grammo di ${capitalized} tra diverse farmacie online italiane. Trova la confezione più conveniente.`;
+      const pageUrl = `https://farmacompara.lovable.app/cerca/${rawQuery}`;
+
+      document.title = pageTitle;
+      setMeta("name", "description", pageDesc);
+
+      // Canonical
       let canonical = document.querySelector('link[rel="canonical"]') as HTMLLinkElement;
       if (!canonical) {
         canonical = document.createElement("link");
         canonical.setAttribute("rel", "canonical");
         document.head.appendChild(canonical);
       }
-      canonical.setAttribute("href", `https://farmacompara.lovable.app/cerca/${rawQuery}`);
+      canonical.setAttribute("href", pageUrl);
+
+      // Open Graph
+      setMeta("property", "og:title", pageTitle);
+      setMeta("property", "og:description", pageDesc);
+      setMeta("property", "og:url", pageUrl);
+
+      // Twitter
+      setMeta("name", "twitter:title", pageTitle);
+      setMeta("name", "twitter:description", pageDesc);
     }
     return () => {
       document.title = "FarmaCompara";
       const canonical = document.querySelector('link[rel="canonical"]');
       if (canonical) canonical.remove();
+      // Restore homepage OG/Twitter
+      const homeName = "FarmaCompara";
+      const homeDesc = "Confronta il costo reale dei farmaci tra diverse farmacie online, scopri il più conveniente!";
+      setMeta("property", "og:title", homeName);
+      setMeta("property", "og:description", homeDesc);
+      setMeta("property", "og:url", "https://farmacompara.lovable.app/");
+      setMeta("name", "twitter:title", homeName);
+      setMeta("name", "twitter:description", homeDesc);
     };
   }, [query, rawQuery]);
 
@@ -76,6 +106,45 @@ const Search = () => {
       if (el) el.remove();
     };
   }, [results, query, rawQuery]);
+
+  // Breadcrumb JSON-LD
+  useEffect(() => {
+    if (!query) return;
+    const capitalized = query.charAt(0).toUpperCase() + query.slice(1);
+    const breadcrumbLd = {
+      "@context": "https://schema.org",
+      "@type": "BreadcrumbList",
+      "itemListElement": [
+        {
+          "@type": "ListItem",
+          "position": 1,
+          "name": "Home",
+          "item": "https://farmacompara.lovable.app/",
+        },
+        {
+          "@type": "ListItem",
+          "position": 2,
+          "name": "Principi attivi",
+          "item": "https://farmacompara.lovable.app/principi-attivi",
+        },
+        {
+          "@type": "ListItem",
+          "position": 3,
+          "name": capitalized,
+          "item": `https://farmacompara.lovable.app/cerca/${rawQuery}`,
+        },
+      ],
+    };
+    const script = document.createElement("script");
+    script.type = "application/ld+json";
+    script.id = "farma-breadcrumb-jsonld";
+    script.textContent = JSON.stringify(breadcrumbLd);
+    document.head.appendChild(script);
+    return () => {
+      const el = document.getElementById("farma-breadcrumb-jsonld");
+      if (el) el.remove();
+    };
+  }, [query, rawQuery]);
 
   // Auto-search on mount
   useEffect(() => {
