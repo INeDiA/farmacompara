@@ -31,7 +31,7 @@ const Search = () => {
       const capitalized = query.charAt(0).toUpperCase() + query.slice(1);
       const pageTitle = `${capitalized}: confronta prezzi e trova il più conveniente | FarmaCompara`;
       const pageDesc = `Confronta il prezzo per grammo di ${capitalized} tra diverse farmacie online italiane. Trova la confezione più conveniente.`;
-      const pageUrl = `https://farmacompara.lovable.app/cerca/${rawQuery}`;
+      const pageUrl = `https://farmacompara.it/cerca/${rawQuery}`;
 
       document.title = pageTitle;
       setMeta("name", "description", pageDesc);
@@ -63,7 +63,7 @@ const Search = () => {
       const homeDesc = "Confronta il costo reale dei farmaci tra diverse farmacie online, scopri il più conveniente!";
       setMeta("property", "og:title", homeName);
       setMeta("property", "og:description", homeDesc);
-      setMeta("property", "og:url", "https://farmacompara.lovable.app/");
+      setMeta("property", "og:url", "https://farmacompara.it/");
       setMeta("name", "twitter:title", homeName);
       setMeta("name", "twitter:description", homeDesc);
     };
@@ -78,7 +78,7 @@ const Search = () => {
       "@context": "https://schema.org",
       "@type": "ItemList",
       "name": `${capitalized} — confronto prezzi`,
-      "url": `https://farmacompara.lovable.app/cerca/${rawQuery}`,
+      "url": `https://farmacompara.it/cerca/${rawQuery}`,
       "numberOfItems": results.products.length,
       "itemListElement": results.products.slice(0, 10).map((p, i) => ({
         "@type": "ListItem",
@@ -119,19 +119,19 @@ const Search = () => {
           "@type": "ListItem",
           "position": 1,
           "name": "Home",
-          "item": "https://farmacompara.lovable.app/",
+          "item": "https://farmacompara.it/",
         },
         {
           "@type": "ListItem",
           "position": 2,
           "name": "Principi attivi",
-          "item": "https://farmacompara.lovable.app/principi-attivi",
+          "item": "https://farmacompara.it/principi-attivi",
         },
         {
           "@type": "ListItem",
           "position": 3,
           "name": capitalized,
-          "item": `https://farmacompara.lovable.app/cerca/${rawQuery}`,
+          "item": `https://farmacompara.it/cerca/${rawQuery}`,
         },
       ],
     };
