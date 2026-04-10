@@ -73,11 +73,11 @@ const Index = () => {
             </p>
           </div>
 
-          <div className="order-first sm:order-none">
+          <div className="order-none sm:order-last">
             <SearchBar onSearch={handleSearch} />
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 max-w-2xl mx-auto mt-8 -order-1 sm:order-none">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 max-w-2xl mx-auto mt-8 order-last sm:order-none">
             <div className="flex flex-col items-center gap-2 p-4 rounded-2xl bg-card border">
               <TrendingDown className="h-6 w-6 text-primary" />
               <p className="text-sm font-medium">Prezzo/g</p>
