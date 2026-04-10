@@ -1,25 +1,31 @@
 
 
-## Placeholder troncato su mobile
+## Piano SEO per pagine /cerca/
 
-Il placeholder "Cerca principio attivo o farmaco..." è troppo lungo per lo spazio disponibile su mobile (390px) perché il bottone "Cerca" occupa parte dell'input.
+Tre interventi concreti su `src/pages/Search.tsx` e `src/components/ResultsTable.tsx`.
 
-### Opzioni
+### 1. Canonical tag dinamico
 
-1. **Accorciare il placeholder**: usare "Cerca farmaco o principio attivo..." → comunque lungo. Meglio: **"Cerca farmaco..."** su mobile, testo completo su desktop.
-2. **Placeholder responsive**: non è possibile con un semplice attributo HTML, ma si può usare il hook `useIsMobile()` già presente nel progetto per scegliere il testo.
+Aggiungere nell'`useEffect` esistente (riga 18-30) la creazione/aggiornamento di un tag `<link rel="canonical">` che punta a `https://farmacompara.lovable.app/cerca/{slug}`. Rimuoverlo al cleanup.
 
-### Soluzione proposta
+### 2. Title tag ottimizzato + H1 con testo descrittivo
 
-In `SearchBar.tsx`, usare `useIsMobile()` per impostare:
-- **Mobile**: `"Cerca farmaco..."`
-- **Desktop**: `"Cerca principio attivo o farmaco..."`
+- **Title**: da `"Paracetamolo — Confronta prezzi farmaci online | FarmaCompara"` a `"Paracetamolo: confronta prezzi e trova il più conveniente | FarmaCompara"`
+- **H1 visibile**: Aggiungere sopra la tabella risultati un heading `<h1>` con il nome del principio attivo e un breve paragrafo descrittivo statico tipo *"Confronta il prezzo al grammo di Paracetamolo tra le farmacie online italiane e trova la confezione più conveniente."* — evita thin content senza entrare in ambito medico (no E-E-A-T rischioso).
+
+### 3. Dati strutturati Schema.org (ItemList + AggregateOffer)
+
+Quando i risultati sono disponibili, iniettare un `<script type="application/ld+json">` con:
+- `@type: ItemList` contenente i prodotti come `ListItem`
+- Ogni item con `@type: Product`, `name`, `offers.@type: AggregateOffer`, `lowPrice`, `highPrice`, `priceCurrency: EUR`
+
+Questo viene fatto dinamicamente nell'`useEffect` dopo il caricamento dei risultati.
 
 ### File da modificare
 
-| File | Modifica |
-|------|----------|
-| `src/components/SearchBar.tsx` | Import `useIsMobile`, placeholder condizionale |
+| File | Cosa |
+|------|------|
+| `src/pages/Search.tsx` | Canonical tag, title migliorato, H1 + paragrafo, JSON-LD dinamico |
 
-Una modifica di 3 righe.
+Un solo file, circa 50 righe aggiunte.
 
