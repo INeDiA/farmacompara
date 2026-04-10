@@ -1,5 +1,6 @@
 import { useState, FormEvent } from "react";
 import { Search, Pill } from "lucide-react";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { Link } from "react-router-dom";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -13,6 +14,7 @@ interface SearchBarProps {
 }
 
 export function SearchBar({ onSearch, loading, initialQuery = "", showSuggestions = true }: SearchBarProps) {
+  const isMobile = useIsMobile();
   const [query, setQuery] = useState(initialQuery);
 
   const handleSubmit = (e: FormEvent) => {
@@ -28,7 +30,7 @@ export function SearchBar({ onSearch, loading, initialQuery = "", showSuggestion
           <Input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Cerca principio attivo o farmaco..."
+            placeholder={isMobile ? "Cerca farmaco..." : "Cerca principio attivo o farmaco..."}
             className="pl-12 pr-28 h-14 text-base rounded-2xl border-2 border-border bg-card shadow-lg focus-visible:ring-primary/30 focus-visible:border-primary transition-all"
             disabled={loading}
           />
