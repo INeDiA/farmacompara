@@ -10,7 +10,7 @@ const PrincipiAttivi = () => {
     if (meta) {
       meta.setAttribute("content", "Elenco completo dei principi attivi disponibili su FarmaCompara. Confronta il prezzo per grammo tra farmacie online italiane.");
     }
-    return () => { document.title = "FarmaCompara"; };
+    return () => { document.title = "FarmaCompara — Confronta i prezzi dei farmaci online in Italia"; };
   }, []);
 
   return (
