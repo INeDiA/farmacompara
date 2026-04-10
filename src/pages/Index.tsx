@@ -61,7 +61,7 @@ const Index = () => {
       <main className="container mx-auto px-4 py-8">
         <div className="text-center mb-10 space-y-6 flex flex-col">
           <div className="space-y-3">
-            <h2 className="text-3xl sm:text-4xl font-bold tracking-tight">
+            <h1 className="text-3xl sm:text-4xl font-bold tracking-tight">
               Quanto costa davvero
               <br />
               il tuo <span className="text-primary">farmaco</span>?
