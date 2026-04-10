@@ -65,7 +65,7 @@ const Index = () => {
               Quanto costa davvero
               <br />
               il tuo <span className="text-primary">farmaco</span>?
-            </h2>
+            </h1>
             <p className="text-muted-foreground max-w-lg mx-auto">
               Confronta il costo per grammo di principio attivo tra diverse
               farmacie online. Stessa molecola, confezioni diverse: scopri
