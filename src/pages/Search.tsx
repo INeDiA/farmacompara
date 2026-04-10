@@ -107,6 +107,45 @@ const Search = () => {
     };
   }, [results, query, rawQuery]);
 
+  // Breadcrumb JSON-LD
+  useEffect(() => {
+    if (!query) return;
+    const capitalized = query.charAt(0).toUpperCase() + query.slice(1);
+    const breadcrumbLd = {
+      "@context": "https://schema.org",
+      "@type": "BreadcrumbList",
+      "itemListElement": [
+        {
+          "@type": "ListItem",
+          "position": 1,
+          "name": "Home",
+          "item": "https://farmacompara.lovable.app/",
+        },
+        {
+          "@type": "ListItem",
+          "position": 2,
+          "name": "Principi attivi",
+          "item": "https://farmacompara.lovable.app/principi-attivi",
+        },
+        {
+          "@type": "ListItem",
+          "position": 3,
+          "name": capitalized,
+          "item": `https://farmacompara.lovable.app/cerca/${rawQuery}`,
+        },
+      ],
+    };
+    const script = document.createElement("script");
+    script.type = "application/ld+json";
+    script.id = "farma-breadcrumb-jsonld";
+    script.textContent = JSON.stringify(breadcrumbLd);
+    document.head.appendChild(script);
+    return () => {
+      const el = document.getElementById("farma-breadcrumb-jsonld");
+      if (el) el.remove();
+    };
+  }, [query, rawQuery]);
+
   // Auto-search on mount
   useEffect(() => {
     if (query && !hasSearched) {
