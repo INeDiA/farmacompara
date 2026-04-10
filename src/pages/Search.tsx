@@ -29,7 +29,7 @@ const Search = () => {
   useEffect(() => {
     if (query) {
       const capitalized = query.charAt(0).toUpperCase() + query.slice(1);
-      const pageTitle = `${capitalized}: confronta prezzi e trova il più conveniente | FarmaCompara`;
+      const pageTitle = `${capitalized}: confronta prezzi tra farmacie online | FarmaCompara`;
       const pageDesc = `Confronta il prezzo per grammo di ${capitalized} tra diverse farmacie online italiane. Trova la confezione più conveniente.`;
       const pageUrl = `https://farmacompara.it/cerca/${rawQuery}`;
 
@@ -55,11 +55,11 @@ const Search = () => {
       setMeta("name", "twitter:description", pageDesc);
     }
     return () => {
-      document.title = "FarmaCompara";
+      document.title = "FarmaCompara — Confronta i prezzi dei farmaci online in Italia";
       const canonical = document.querySelector('link[rel="canonical"]');
       if (canonical) canonical.remove();
       // Restore homepage OG/Twitter
-      const homeName = "FarmaCompara";
+      const homeName = "FarmaCompara — Confronta i prezzi dei farmaci online in Italia";
       const homeDesc = "Confronta il costo reale dei farmaci tra diverse farmacie online, scopri il più conveniente!";
       setMeta("property", "og:title", homeName);
       setMeta("property", "og:description", homeDesc);
@@ -181,7 +181,7 @@ const Search = () => {
         {query && (
           <div className="mt-6">
             <h1 className="text-2xl font-bold tracking-tight">
-              {query.charAt(0).toUpperCase() + query.slice(1)}
+              {query.charAt(0).toUpperCase() + query.slice(1)}: confronta i prezzi tra farmacie online italiane
             </h1>
             <p className="text-muted-foreground mt-1">
               Confronta il prezzo al grammo di {query.charAt(0).toUpperCase() + query.slice(1)} tra le farmacie online italiane e trova la confezione più conveniente.
