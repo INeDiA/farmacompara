@@ -1,31 +1,62 @@
 
 
-## Piano SEO per pagine /cerca/
+## Piano: OG dinamici + Breadcrumb JSON-LD + PWA installabile
 
-Tre interventi concreti su `src/pages/Search.tsx` e `src/components/ResultsTable.tsx`.
+### 1. Open Graph dinamici per /cerca/
 
-### 1. Canonical tag dinamico
+**File: `src/pages/Search.tsx`**
 
-Aggiungere nell'`useEffect` esistente (riga 18-30) la creazione/aggiornamento di un tag `<link rel="canonical">` che punta a `https://farmacompara.lovable.app/cerca/{slug}`. Rimuoverlo al cleanup.
+Nell'`useEffect` esistente che gestisce title/meta/canonical (righe 18-40), aggiungere l'aggiornamento dinamico dei meta tag OG e Twitter:
 
-### 2. Title tag ottimizzato + H1 con testo descrittivo
+- `og:title` → "Paracetamolo: confronta prezzi | FarmaCompara"
+- `og:description` → "Confronta il prezzo per grammo di Paracetamolo tra diverse farmacie online italiane."
+- `og:url` → URL canonical della pagina
+- `twitter:title` e `twitter:description` → stessi valori
 
-- **Title**: da `"Paracetamolo — Confronta prezzi farmaci online | FarmaCompara"` a `"Paracetamolo: confronta prezzi e trova il più conveniente | FarmaCompara"`
-- **H1 visibile**: Aggiungere sopra la tabella risultati un heading `<h1>` con il nome del principio attivo e un breve paragrafo descrittivo statico tipo *"Confronta il prezzo al grammo di Paracetamolo tra le farmacie online italiane e trova la confezione più conveniente."* — evita thin content senza entrare in ambito medico (no E-E-A-T rischioso).
+Al cleanup, ripristinare i valori originali della homepage.
 
-### 3. Dati strutturati Schema.org (ItemList + AggregateOffer)
+### 2. Breadcrumb JSON-LD strutturati
 
-Quando i risultati sono disponibili, iniettare un `<script type="application/ld+json">` con:
-- `@type: ItemList` contenente i prodotti come `ListItem`
-- Ogni item con `@type: Product`, `name`, `offers.@type: AggregateOffer`, `lowPrice`, `highPrice`, `priceCurrency: EUR`
+**File: `src/pages/Search.tsx`**
 
-Questo viene fatto dinamicamente nell'`useEffect` dopo il caricamento dei risultati.
+Aggiungere un secondo `useEffect` che inietta un blocco `<script type="application/ld+json">` con schema `BreadcrumbList`:
 
-### File da modificare
+```
+Home > Cerca > {Principio Attivo}
+```
 
-| File | Cosa |
-|------|------|
-| `src/pages/Search.tsx` | Canonical tag, title migliorato, H1 + paragrafo, JSON-LD dinamico |
+Tre livelli: homepage, pagina cerca, principio attivo corrente. Rimosso al cleanup.
 
-Un solo file, circa 50 righe aggiunte.
+### 3. PWA / App installabile (approccio leggero, senza service worker)
+
+Dato che non serve supporto offline, usiamo solo un **web manifest** per rendere l'app installabile (Add to Home Screen):
+
+**File: `public/manifest.json`** (nuovo)
+- `name`, `short_name`, `start_url: "/"`, `display: "standalone"`, `theme_color`, `background_color`
+- Array `icons` con icone 192x192 e 512x512
+
+**File: `index.html`**
+- Aggiungere `<link rel="manifest" href="/manifest.json">`
+- Aggiungere `<meta name="theme-color" content="...">`
+- Aggiungere tag Apple: `<meta name="apple-mobile-web-app-capable">`, `<link rel="apple-touch-icon">`
+
+**File: `public/icon-192.png` e `public/icon-512.png`** (nuovi)
+- Icone generate programmaticamente (SVG/canvas con il logo Pill + colore primario)
+
+Nessun service worker, nessun `vite-plugin-pwa` — solo il manifest per l'installabilità. Funziona su Chrome/Edge Android (prompt "Aggiungi a schermata Home") e Safari iOS (Share > Aggiungi a Home).
+
+### Riepilogo file
+
+| File | Azione |
+|------|--------|
+| `src/pages/Search.tsx` | Aggiungere OG dinamici + Breadcrumb JSON-LD |
+| `public/manifest.json` | Creare manifest PWA |
+| `public/icon-192.png` | Creare icona 192x192 |
+| `public/icon-512.png` | Creare icona 512x512 |
+| `index.html` | Aggiungere link manifest + meta PWA |
+
+### Impatto
+- Zero dipendenze aggiuntive
+- Nessun service worker (nessun problema con preview Lovable)
+- Build time invariato
 
