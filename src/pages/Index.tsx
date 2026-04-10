@@ -53,7 +53,7 @@ const Index = () => {
             <div className="h-9 w-9 rounded-xl bg-primary flex items-center justify-center">
               <Pill className="h-5 w-5 text-primary-foreground" />
             </div>
-            <h1 className="text-xl font-bold tracking-tight">FarmaCompara</h1>
+            <span className="text-xl font-bold tracking-tight">FarmaCompara</span>
           </div>
         </div>
       </header>
@@ -61,11 +61,11 @@ const Index = () => {
       <main className="container mx-auto px-4 py-8">
         <div className="text-center mb-10 space-y-6 flex flex-col">
           <div className="space-y-3">
-            <h2 className="text-3xl sm:text-4xl font-bold tracking-tight">
+            <h1 className="text-3xl sm:text-4xl font-bold tracking-tight">
               Quanto costa davvero
               <br />
               il tuo <span className="text-primary">farmaco</span>?
-            </h2>
+            </h1>
             <p className="text-muted-foreground max-w-lg mx-auto">
               Confronta il costo per grammo di principio attivo tra diverse
               farmacie online. Stessa molecola, confezioni diverse: scopri

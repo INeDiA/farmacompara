@@ -29,8 +29,8 @@ const Search = () => {
   useEffect(() => {
     if (query) {
       const capitalized = query.charAt(0).toUpperCase() + query.slice(1);
-      const pageTitle = `${capitalized}: confronta prezzi tra farmacie online | FarmaCompara`;
-      const pageDesc = `Confronta il prezzo per grammo di ${capitalized} tra diverse farmacie online italiane. Trova la confezione più conveniente.`;
+      const pageTitle = `${capitalized}: confronta prezzi farmacie online | FarmaCompara`;
+      const pageDesc = `Confronta il prezzo di ${capitalized} tra diverse farmacie online italiane. Trova la confezione più conveniente e risparmia sul tuo acquisto.`;
       const pageUrl = `https://farmacompara.it/cerca/${rawQuery}`;
 
       document.title = pageTitle;
@@ -60,7 +60,7 @@ const Search = () => {
       if (canonical) canonical.remove();
       // Restore homepage OG/Twitter
       const homeName = "FarmaCompara — Confronta i prezzi dei farmaci online in Italia";
-      const homeDesc = "Confronta il costo reale dei farmaci tra diverse farmacie online, scopri il più conveniente!";
+      const homeDesc = "Confronta il costo reale dei farmaci tra diverse farmacie online italiane. Prezzo normalizzato per grammo di principio attivo, spedizione inclusa nel confronto.";
       setMeta("property", "og:title", homeName);
       setMeta("property", "og:description", homeDesc);
       setMeta("property", "og:url", "https://farmacompara.it/");
@@ -170,7 +170,7 @@ const Search = () => {
             <div className="h-9 w-9 rounded-xl bg-primary flex items-center justify-center">
               <Pill className="h-5 w-5 text-primary-foreground" />
             </div>
-            <h1 className="text-xl font-bold tracking-tight">FarmaCompara</h1>
+            <span className="text-xl font-bold tracking-tight">FarmaCompara</span>
           </Link>
         </div>
       </header>

@@ -5,7 +5,7 @@ import { ALL_PRINCIPI_ATTIVI, toSlug } from "@/lib/principiAttivi";
 
 const PrincipiAttivi = () => {
   useEffect(() => {
-    document.title = "Confronta prezzi farmaci — Tutti i principi attivi | FarmaCompara";
+    document.title = "Tutti i principi attivi — Confronta prezzi | FarmaCompara";
     const meta = document.querySelector('meta[name="description"]');
     if (meta) {
       meta.setAttribute("content", "Elenco completo dei principi attivi disponibili su FarmaCompara. Confronta il prezzo per grammo tra farmacie online italiane.");
@@ -21,7 +21,7 @@ const PrincipiAttivi = () => {
             <div className="h-9 w-9 rounded-xl bg-primary flex items-center justify-center">
               <Pill className="h-5 w-5 text-primary-foreground" />
             </div>
-            <h1 className="text-xl font-bold tracking-tight">FarmaCompara</h1>
+            <span className="text-xl font-bold tracking-tight">FarmaCompara</span>
           </Link>
         </div>
       </header>
