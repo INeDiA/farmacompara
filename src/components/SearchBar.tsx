@@ -1,24 +1,19 @@
 import { useState, FormEvent } from "react";
 import { Search, Pill } from "lucide-react";
+import { Link } from "react-router-dom";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { TOP_PRINCIPI_ATTIVI, toSlug } from "@/lib/principiAttivi";
 
 interface SearchBarProps {
   onSearch: (query: string) => void;
   loading?: boolean;
+  initialQuery?: string;
+  showSuggestions?: boolean;
 }
 
-const suggestions = [
-  "Paracetamolo",
-  "Ibuprofene",
-  "Ketoprofene",
-  "Acido acetilsalicilico",
-  "Diclofenac",
-  "Nimesulide",
-];
-
-export function SearchBar({ onSearch, loading }: SearchBarProps) {
-  const [query, setQuery] = useState("");
+export function SearchBar({ onSearch, loading, initialQuery = "", showSuggestions = true }: SearchBarProps) {
+  const [query, setQuery] = useState(initialQuery);
 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
@@ -54,22 +49,20 @@ export function SearchBar({ onSearch, loading }: SearchBarProps) {
         </div>
       </form>
 
-      <div className="flex flex-wrap gap-2 mt-4 justify-center">
-        {suggestions.map((s) => (
-          <button
-            key={s}
-            onClick={() => {
-              setQuery(s);
-              onSearch(s);
-            }}
-            disabled={loading}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm bg-secondary text-secondary-foreground hover:bg-primary hover:text-primary-foreground transition-colors disabled:opacity-50"
-          >
-            <Pill className="h-3.5 w-3.5" />
-            {s}
-          </button>
-        ))}
-      </div>
+      {showSuggestions && (
+        <div className="flex flex-wrap gap-2 mt-4 justify-center">
+          {TOP_PRINCIPI_ATTIVI.map((s) => (
+            <Link
+              key={s}
+              to={`/cerca/${toSlug(s)}`}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm bg-secondary text-secondary-foreground hover:bg-primary hover:text-primary-foreground transition-colors"
+            >
+              <Pill className="h-3.5 w-3.5" />
+              {s}
+            </Link>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
