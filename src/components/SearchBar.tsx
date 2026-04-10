@@ -14,6 +14,7 @@ interface SearchBarProps {
 }
 
 export function SearchBar({ onSearch, loading, initialQuery = "", showSuggestions = true }: SearchBarProps) {
+  const isMobile = useIsMobile();
   const [query, setQuery] = useState(initialQuery);
 
   const handleSubmit = (e: FormEvent) => {
