@@ -54,7 +54,7 @@ const PrincipiAttivi = () => {
       <footer className="border-t mt-auto">
         <div className="container mx-auto px-4 py-6 text-center text-xs text-muted-foreground space-y-1">
           <p>FarmaCompara — confronto prezzi farmaci online italiani</p>
-          <p>I prezzi mostrati sono indicativi e aggiornati ogni 24 ore.</p>
+          <p>I prezzi mostrati sono indicativi e aggiornati ogni 48 ore.</p>
         </div>
       </footer>
     </div>
