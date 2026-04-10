@@ -104,7 +104,7 @@ const Index = () => {
       <footer className="border-t mt-auto">
         <div className="container mx-auto px-4 py-6 text-center text-xs text-muted-foreground space-y-1">
           <p>FarmaCompara — confronto prezzi farmaci online italiani</p>
-          <p>I prezzi mostrati sono indicativi e aggiornati ogni 24 ore. Verifica sempre sul sito della farmacia prima dell'acquisto.</p>
+          <p>I prezzi mostrati sono indicativi e aggiornati ogni 48 ore. Verifica sempre sul sito della farmacia prima dell'acquisto.</p>
           <Link to="/principi-attivi" className="text-primary hover:underline">
             Tutti i principi attivi
           </Link>
