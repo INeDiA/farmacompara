@@ -73,6 +73,8 @@ const Index = () => {
             </p>
           </div>
 
+          <SearchBar onSearch={handleSearch} />
+
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 max-w-2xl mx-auto mt-8">
             <div className="flex flex-col items-center gap-2 p-4 rounded-2xl bg-card border">
               <TrendingDown className="h-6 w-6 text-primary" />
@@ -97,8 +99,6 @@ const Index = () => {
             </div>
           </div>
         </div>
-
-        <SearchBar onSearch={handleSearch} />
       </main>
 
       <footer className="border-t mt-auto">
