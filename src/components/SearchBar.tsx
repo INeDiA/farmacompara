@@ -1,5 +1,6 @@
 import { useState, FormEvent } from "react";
 import { Search, Pill } from "lucide-react";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { Link } from "react-router-dom";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
