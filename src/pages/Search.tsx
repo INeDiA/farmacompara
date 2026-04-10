@@ -14,20 +14,68 @@ const Search = () => {
   const { results, loading, error, search, reset } = useFarmaSearch();
   const [hasSearched, setHasSearched] = useState(false);
 
-  // Set document title and meta
+  // Set document title, meta, and canonical
   useEffect(() => {
     if (query) {
       const capitalized = query.charAt(0).toUpperCase() + query.slice(1);
-      document.title = `${capitalized} — Confronta prezzi farmaci online | FarmaCompara`;
+      document.title = `${capitalized}: confronta prezzi e trova il più conveniente | FarmaCompara`;
       const meta = document.querySelector('meta[name="description"]');
       if (meta) {
         meta.setAttribute("content", `Confronta il prezzo per grammo di ${capitalized} tra diverse farmacie online italiane. Trova la confezione più conveniente.`);
       }
+      // Canonical tag
+      let canonical = document.querySelector('link[rel="canonical"]') as HTMLLinkElement;
+      if (!canonical) {
+        canonical = document.createElement("link");
+        canonical.setAttribute("rel", "canonical");
+        document.head.appendChild(canonical);
+      }
+      canonical.setAttribute("href", `https://farmacompara.lovable.app/cerca/${rawQuery}`);
     }
     return () => {
       document.title = "FarmaCompara";
+      const canonical = document.querySelector('link[rel="canonical"]');
+      if (canonical) canonical.remove();
     };
-  }, [query]);
+  }, [query, rawQuery]);
+
+  // JSON-LD structured data
+  useEffect(() => {
+    if (!results || !results.products.length || !query) return;
+    const capitalized = query.charAt(0).toUpperCase() + query.slice(1);
+    const prices = results.products.map(p => p.price);
+    const jsonLd = {
+      "@context": "https://schema.org",
+      "@type": "ItemList",
+      "name": `${capitalized} — confronto prezzi`,
+      "url": `https://farmacompara.lovable.app/cerca/${rawQuery}`,
+      "numberOfItems": results.products.length,
+      "itemListElement": results.products.slice(0, 10).map((p, i) => ({
+        "@type": "ListItem",
+        "position": i + 1,
+        "item": {
+          "@type": "Product",
+          "name": p.name,
+          "url": p.product_url || undefined,
+          "offers": {
+            "@type": "Offer",
+            "price": p.price,
+            "priceCurrency": "EUR",
+            "availability": "https://schema.org/InStock",
+          },
+        },
+      })),
+    };
+    const script = document.createElement("script");
+    script.type = "application/ld+json";
+    script.id = "farma-jsonld";
+    script.textContent = JSON.stringify(jsonLd);
+    document.head.appendChild(script);
+    return () => {
+      const el = document.getElementById("farma-jsonld");
+      if (el) el.remove();
+    };
+  }, [results, query, rawQuery]);
 
   // Auto-search on mount
   useEffect(() => {
@@ -60,6 +108,17 @@ const Search = () => {
 
       <main className="container mx-auto px-4 py-8">
         <SearchBar onSearch={handleSearch} loading={loading} initialQuery={query} />
+
+        {query && (
+          <div className="mt-6">
+            <h1 className="text-2xl font-bold tracking-tight">
+              {query.charAt(0).toUpperCase() + query.slice(1)}
+            </h1>
+            <p className="text-muted-foreground mt-1">
+              Confronta il prezzo al grammo di {query.charAt(0).toUpperCase() + query.slice(1)} tra le farmacie online italiane e trova la confezione più conveniente.
+            </p>
+          </div>
+        )}
 
         {error && (
           <div className="mt-6 p-4 rounded-xl bg-destructive/10 border border-destructive/20 text-center">
