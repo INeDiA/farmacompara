@@ -170,7 +170,7 @@ const Search = () => {
             <div className="h-9 w-9 rounded-xl bg-primary flex items-center justify-center">
               <Pill className="h-5 w-5 text-primary-foreground" />
             </div>
-            <h1 className="text-xl font-bold tracking-tight">FarmaCompara</h1>
+            <span className="text-xl font-bold tracking-tight">FarmaCompara</span>
           </Link>
         </div>
       </header>
