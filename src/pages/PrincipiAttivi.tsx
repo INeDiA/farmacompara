@@ -52,9 +52,18 @@ const PrincipiAttivi = () => {
       </main>
 
       <footer className="border-t mt-auto">
-        <div className="container mx-auto px-4 py-6 text-center text-xs text-muted-foreground space-y-1">
+        <div className="container mx-auto px-4 py-6 text-center text-xs text-muted-foreground space-y-2">
           <p>FarmaCompara — confronto prezzi farmaci online italiani</p>
           <p>I prezzi mostrati sono indicativi e aggiornati ogni 48 ore.</p>
+          <div className="flex items-center justify-center gap-3 flex-wrap">
+            <a href="https://www.iubenda.com/privacy-policy/98369577" className="text-primary hover:underline" target="_blank" rel="noopener noreferrer">
+              Privacy Policy
+            </a>
+            <span className="text-border">•</span>
+            <a href="https://www.iubenda.com/privacy-policy/98369577/cookie-policy" className="text-primary hover:underline" target="_blank" rel="noopener noreferrer">
+              Cookie Policy
+            </a>
+          </div>
         </div>
       </footer>
     </div>
