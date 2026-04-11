@@ -67,9 +67,9 @@ const Index = () => {
               il tuo <span className="text-primary">farmaco</span>?
             </h1>
             <p className="text-muted-foreground max-w-lg mx-auto">
-              Confronta il costo per grammo di principio attivo tra diverse
-              farmacie online. Stessa molecola, confezioni diverse: scopri
-              quale conviene davvero.
+              Confronta il costo al grammo di principio attivo tra farmacie
+              online. Stessa molecola, confezioni diverse: scopri quale
+              conviene davvero.
             </p>
           </div>
 
@@ -82,7 +82,7 @@ const Index = () => {
               <TrendingDown className="h-6 w-6 text-primary" />
               <p className="text-sm font-medium">Prezzo/g</p>
               <p className="text-xs text-muted-foreground text-center">
-                Costo normalizzato per grammo di principio attivo
+                Confronto basato sul costo per grammo di principio attivo, non sul prezzo della confezione
               </p>
             </div>
             <div className="flex flex-col items-center gap-2 p-4 rounded-2xl bg-card border">
@@ -96,7 +96,7 @@ const Index = () => {
               <Shield className="h-6 w-6 text-primary" />
               <p className="text-sm font-medium">Farmacie online</p>
               <p className="text-xs text-muted-foreground text-center">
-                Risultati da diverse farmacie online che spediscono in Italia
+                Risultati da farmacie online autorizzate che spediscono in tutta Italia
               </p>
             </div>
           </div>
@@ -105,7 +105,7 @@ const Index = () => {
 
       <footer className="border-t mt-auto">
         <div className="container mx-auto px-4 py-6 text-center text-xs text-muted-foreground space-y-2">
-          <p>FarmaCompara — confronto prezzi farmaci online italiani</p>
+          <p>FarmaCompara — confronto prezzi al grammo di principio attivo tra farmacie online italiane</p>
           <p>I prezzi mostrati sono indicativi e aggiornati ogni 48 ore. Verifica sempre sul sito della farmacia prima dell'acquisto.</p>
           <div className="flex items-center justify-center gap-3 flex-wrap">
             <Link to="/principi-attivi" className="text-primary hover:underline">
