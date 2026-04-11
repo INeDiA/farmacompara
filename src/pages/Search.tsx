@@ -28,8 +28,8 @@ const Search = () => {
   useEffect(() => {
     if (query) {
       const capitalized = query.charAt(0).toUpperCase() + query.slice(1);
-      const pageTitle = `${capitalized}: confronta prezzi farmacie online | FarmaCompara`;
-      const pageDesc = `Confronta il prezzo di ${capitalized} tra diverse farmacie online italiane. Trova la confezione più conveniente e risparmia sul tuo acquisto.`;
+      const pageTitle = `${capitalized}: prezzo al grammo tra farmacie online | FarmaCompara`;
+      const pageDesc = `Quanto costa ${capitalized} al grammo di principio attivo? Confronta il costo normalizzato tra farmacie online italiane e trova la confezione più conveniente.`;
       const pageUrl = `https://farmacompara.it/cerca/${rawQuery}`;
 
       document.title = pageTitle;
@@ -54,12 +54,12 @@ const Search = () => {
       setMeta("name", "twitter:description", pageDesc);
     }
     return () => {
-      document.title = "FarmaCompara — Confronta i prezzi dei farmaci online in Italia";
+      document.title = "FarmaCompara — Prezzo al grammo di principio attivo tra farmacie online";
       const canonical = document.querySelector('link[rel="canonical"]');
       if (canonical) canonical.remove();
       // Restore homepage OG/Twitter
-      const homeName = "FarmaCompara — Confronta i prezzi dei farmaci online in Italia";
-      const homeDesc = "Confronta il costo reale dei farmaci tra diverse farmacie online italiane. Prezzo normalizzato per grammo di principio attivo, spedizione inclusa nel confronto.";
+      const homeName = "FarmaCompara — Prezzo al grammo di principio attivo tra farmacie online";
+      const homeDesc = "Confronta il costo al grammo di principio attivo tra farmacie online italiane. Stessa molecola, confezioni diverse: scopri quale conviene davvero.";
       setMeta("property", "og:title", homeName);
       setMeta("property", "og:description", homeDesc);
       setMeta("property", "og:url", "https://farmacompara.it/");
@@ -179,10 +179,10 @@ const Search = () => {
         {query && (
           <div className="mt-6">
             <h1 className="text-2xl font-bold tracking-tight">
-              {query.charAt(0).toUpperCase() + query.slice(1)}: confronta i prezzi tra farmacie online italiane
+              {query.charAt(0).toUpperCase() + query.slice(1)}: prezzo al grammo di principio attivo
             </h1>
             <p className="text-muted-foreground mt-1">
-              Confronta il prezzo al grammo di {query.charAt(0).toUpperCase() + query.slice(1)} tra le farmacie online italiane e trova la confezione più conveniente.
+              Confronta il costo normalizzato per grammo di {query.charAt(0).toUpperCase() + query.slice(1)} tra farmacie online italiane. Stessa molecola, confezioni diverse: trova quella che conviene.
             </p>
           </div>
         )}
@@ -203,7 +203,7 @@ const Search = () => {
 
       <footer className="border-t mt-auto">
         <div className="container mx-auto px-4 py-6 text-center text-xs text-muted-foreground space-y-2">
-          <p>FarmaCompara — confronto prezzi farmaci online italiani</p>
+          <p>FarmaCompara — confronto prezzi al grammo di principio attivo tra farmacie online italiane</p>
           <p>I prezzi mostrati sono indicativi e aggiornati ogni 48 ore. Verifica sempre sul sito della farmacia prima dell'acquisto.</p>
           <div className="flex items-center justify-center gap-3 flex-wrap">
             <Link to="/principi-attivi" className="text-primary hover:underline">

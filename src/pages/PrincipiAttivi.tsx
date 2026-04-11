@@ -5,12 +5,12 @@ import { ALL_PRINCIPI_ATTIVI, toSlug } from "@/lib/principiAttivi";
 
 const PrincipiAttivi = () => {
   useEffect(() => {
-    document.title = "Tutti i principi attivi — Confronta prezzi | FarmaCompara";
+    document.title = "Principi attivi — Prezzo al grammo tra farmacie online | FarmaCompara";
     const meta = document.querySelector('meta[name="description"]');
     if (meta) {
-      meta.setAttribute("content", "Elenco completo dei principi attivi disponibili su FarmaCompara. Confronta il prezzo per grammo tra farmacie online italiane.");
+      meta.setAttribute("content", "Elenco completo dei principi attivi. Confronta il costo al grammo di ogni molecola tra farmacie online italiane.");
     }
-    return () => { document.title = "FarmaCompara — Confronta i prezzi dei farmaci online in Italia"; };
+    return () => { document.title = "FarmaCompara — Prezzo al grammo di principio attivo tra farmacie online"; };
   }, []);
 
   return (
@@ -31,8 +31,8 @@ const PrincipiAttivi = () => {
           <div className="space-y-2">
             <h2 className="text-3xl font-bold tracking-tight">Tutti i principi attivi</h2>
             <p className="text-muted-foreground">
-              Confronta il costo per grammo di principio attivo tra diverse farmacie online italiane.
-              Seleziona un principio attivo per vedere i prezzi.
+              Confronta il costo al grammo di principio attivo tra farmacie online italiane.
+              Seleziona una molecola per vedere i prezzi.
             </p>
           </div>
 
@@ -53,7 +53,7 @@ const PrincipiAttivi = () => {
 
       <footer className="border-t mt-auto">
         <div className="container mx-auto px-4 py-6 text-center text-xs text-muted-foreground space-y-2">
-          <p>FarmaCompara — confronto prezzi farmaci online italiani</p>
+          <p>FarmaCompara — confronto prezzi al grammo di principio attivo tra farmacie online italiane</p>
           <p>I prezzi mostrati sono indicativi e aggiornati ogni 48 ore.</p>
           <div className="flex items-center justify-center gap-3 flex-wrap">
             <a href="https://www.iubenda.com/privacy-policy/98369577" className="text-primary hover:underline" target="_blank" rel="noopener noreferrer">
