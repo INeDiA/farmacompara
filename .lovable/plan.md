@@ -1,43 +1,24 @@
 
 
-## Piano rivisto: Ricalibrazione keyword SEO — senza "€/g"
+## Piano: Revisione lista principi attivi (52 totali)
 
-Nessun motivo strategico per "€/g" nei testi SEO: non è un termine di ricerca. Manteniamo "€/g" solo nella tabella risultati (UI compatta), rimuovendolo da tutti i testi marketing e metadati.
+### Modifica in `src/lib/principiAttivi.ts`
 
-### 1. `index.html` — Meta statici e JSON-LD
+**TOP_PRINCIPI_ATTIVI (8 in homepage):**
 
-- **Title**: `"FarmaCompara — Prezzo al grammo di principio attivo tra farmacie online"`
-- **Meta description**: `"Confronta il costo al grammo di principio attivo tra farmacie online italiane. Stessa molecola, confezioni diverse: scopri quale conviene davvero."`
-- Allineare `og:title`, `og:description`, `twitter:title`, `twitter:description`
-- JSON-LD WebSite `description`: `"Confronta il costo al grammo di principio attivo tra farmacie online italiane"`
+```
+Paracetamolo, Ibuprofene, Diclofenac, Ketoprofene, Diosmina, N-acetilcisteina, Acido acetilsalicilico, Cetirizina
+```
 
-### 2. `src/pages/Index.tsx` — Copy homepage
+**ALL_PRINCIPI_ATTIVI (52 totali)** — Rimuovere ~20 farmaci con ricetta, aggiungere ~22 OTC/SOP:
 
-- **Sottotitolo**: `"Confronta il costo al grammo di principio attivo tra farmacie online. Stessa molecola, confezioni diverse: scopri quale conviene davvero."`
-- **Card "Prezzo/g"**: `"Confronto basato sul costo per grammo di principio attivo, non sul prezzo della confezione"`
-- **Card "Farmacie online"**: `"Risultati da farmacie online autorizzate che spediscono in tutta Italia"`
-- **Footer** (tutte le pagine): `"FarmaCompara — confronto prezzi al grammo di principio attivo tra farmacie online italiane"`
+**Da rimuovere** (ricetta obbligatoria):
+Amoxicillina, Azitromicina, Claritromicina, Metformina, Atorvastatina, Simvastatina, Ramipril, Amlodipina, Bisoprololo, Furosemide, Levotiroxina, Prednisone, Desametasone, Betametasone, Ciprofloxacina, Levofloxacina, Metoclopramide, Ranitidina, Fluconazolo, Omeprazolo
 
-### 3. `src/pages/Search.tsx` — Meta dinamici, H1, sottotitolo
+**Da aggiungere** (OTC/SOP ad alto volume di ricerca):
+Oximetazolina, Xilometazolina, Ambroxolo, Guaifenesina, Loperamide, Simeticone, Destrometorfano, Benzidamina, Flurbiprofene, Ketotifene, Acido ascorbico, Arnica, Diclofenac topico, Ibuprofen lisina, Lattulosio, Pantenolo, Clotrimazolo, Acido ialuronico topico, Sodio bicarbonato, Nimesulide topico, Carbocisteina, Fexofenadina
 
-- **Title**: `"{Principio}: prezzo al grammo tra farmacie online | FarmaCompara"`
-- **Meta desc**: `"Quanto costa {Principio} al grammo di principio attivo? Confronta il costo normalizzato tra farmacie online italiane e trova la confezione più conveniente."`
-- **H1**: `"{Principio}: prezzo al grammo di principio attivo"`
-- **Sottotitolo**: `"Confronta il costo normalizzato per grammo di {Principio} tra farmacie online italiane. Stessa molecola, confezioni diverse: trova quella che conviene."`
-- **Cleanup return**: allineare ai nuovi valori homepage
+### File modificato
 
-### 4. `src/pages/PrincipiAttivi.tsx`
-
-- **Title**: `"Principi attivi — Prezzo al grammo tra farmacie online | FarmaCompara"`
-- **Meta desc**: `"Elenco completo dei principi attivi. Confronta il costo al grammo di ogni molecola tra farmacie online italiane."`
-- **Sottotitolo**: `"Confronta il costo al grammo di principio attivo tra farmacie online italiane. Seleziona una molecola per vedere i prezzi."`
-
-### 5. `src/pages/NotFound.tsx` — Verifica coerenza testi
-
-### Cosa NON cambia
-
-- `ResultsTable.tsx`: "€/g" resta come etichetta colonna nella tabella (notazione compatta appropriata per UI tabellare)
-- Layout, design, logica applicativa: invariati
-
-5 file, solo testi e meta tag.
+Solo `src/lib/principiAttivi.ts`. I link in homepage e /principi-attivi si aggiornano automaticamente.
 
