@@ -1,24 +1,17 @@
 
 
-## Piano: Revisione lista principi attivi (52 totali)
+## Piano: Aggiornamento sitemap.xml e robots.txt
 
-### Modifica in `src/lib/principiAttivi.ts`
+### Modifiche
 
-**TOP_PRINCIPI_ATTIVI (8 in homepage):**
+**1. `public/robots.txt`**
+- Cambiare dominio sitemap da `farmacompara.lovable.app` a `farmacompara.it`
 
-```
-Paracetamolo, Ibuprofene, Diclofenac, Ketoprofene, Diosmina, N-acetilcisteina, Acido acetilsalicilico, Cetirizina
-```
+**2. `public/sitemap.xml`**
+- Dominio: tutti gli URL passano a `farmacompara.it`
+- Rimuovere i vecchi principi attivi con ricetta (amoxicillina, metformina, ramipril, ecc.)
+- Aggiungere i nuovi 52 principi attivi dalla lista aggiornata in `principiAttivi.ts`
+- Mantenere homepage (priority 1.0), /principi-attivi (0.8), e ogni `/cerca/{principio}` (0.7)
 
-**ALL_PRINCIPI_ATTIVI (52 totali)** — Rimuovere ~20 farmaci con ricetta, aggiungere ~22 OTC/SOP:
-
-**Da rimuovere** (ricetta obbligatoria):
-Amoxicillina, Azitromicina, Claritromicina, Metformina, Atorvastatina, Simvastatina, Ramipril, Amlodipina, Bisoprololo, Furosemide, Levotiroxina, Prednisone, Desametasone, Betametasone, Ciprofloxacina, Levofloxacina, Metoclopramide, Ranitidina, Fluconazolo, Omeprazolo
-
-**Da aggiungere** (OTC/SOP ad alto volume di ricerca):
-Oximetazolina, Xilometazolina, Ambroxolo, Guaifenesina, Loperamide, Simeticone, Destrometorfano, Benzidamina, Flurbiprofene, Ketotifene, Acido ascorbico, Arnica, Diclofenac topico, Ibuprofen lisina, Lattulosio, Pantenolo, Clotrimazolo, Acido ialuronico topico, Sodio bicarbonato, Nimesulide topico, Carbocisteina, Fexofenadina
-
-### File modificato
-
-Solo `src/lib/principiAttivi.ts`. I link in homepage e /principi-attivi si aggiornano automaticamente.
+2 file modificati, nessun impatto su logica o design.
 
