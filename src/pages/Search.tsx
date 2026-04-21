@@ -161,16 +161,23 @@ const Search = () => {
   // Auto-search when query changes. Se il query è un principio attivo con brand mappati,
   // li passiamo come alias così la ricerca trova anche prodotti col solo nome commerciale.
   useEffect(() => {
-    if (query) {
-      const aliases = literal ? [] : activeToBrands(query);
-      search(query, aliases);
-    }
+    if (!query) return;
+
+    const mappedActive = literal ? null : brandToActive(query);
+    if (mappedActive && mappedActive.toLowerCase() !== query.toLowerCase()) return;
+
+    const aliases = literal ? [] : activeToBrands(query);
+    search(query, aliases);
   }, [query, literal]);
 
   const handleSearch = (q: string) => {
+    const active = brandToActive(q);
+    if (active && active.toLowerCase() !== q.trim().toLowerCase()) {
+      navigate(`/cerca/${toSlug(active)}?brand=${encodeURIComponent(q.trim())}`, { replace: true });
+      return;
+    }
+
     navigate(`/cerca/${encodeURIComponent(q.toLowerCase())}`, { replace: true });
-    const aliases = activeToBrands(q);
-    search(q, aliases);
   };
 
   return (
