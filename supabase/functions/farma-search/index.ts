@@ -480,12 +480,30 @@ Deno.serve(async (req) => {
       pharmacyIdMap[p.name] = p.id;
     }
 
-    // Scrape all in parallel
+    // Scrape: per ogni scraper, esegui ricerca su tutti i termini (principio attivo + brand alias)
+    // Il filtro accetta match su una qualunque keyword (filterPattern = "term1|term2|...")
     const results = await Promise.all(
       scrapers.map(async (s) => {
-        const products = await s.scrape(query);
-        return { pharmacyName: s.pharmacyName, products };
-      })
+        const perTerm = await Promise.all(
+          searchTerms.map(async (term) => {
+            const products = await s.scrape(term);
+            // Re-filtra con il pattern combinato così non perdiamo brand match dentro risultati di altri termini
+            return filterByQuery(products, filterPattern);
+          }),
+        );
+        // Dedup per URL prodotto (fallback sul nome)
+        const seen = new Set<string>();
+        const merged: ProductResult[] = [];
+        for (const list of perTerm) {
+          for (const p of list) {
+            const key = (p.product_url || p.name).toLowerCase();
+            if (seen.has(key)) continue;
+            seen.add(key);
+            merged.push(p);
+          }
+        }
+        return { pharmacyName: s.pharmacyName, products: merged };
+      }),
     );
 
     // Delete old products for this query
