@@ -444,11 +444,14 @@ Deno.serve(async (req) => {
       );
     }
 
+    // Cache key: principio attivo + alias (così aggiungere/rimuovere brand invalida la cache)
+    const cacheKey = aliases.length > 0 ? `${query}|${aliases.join(",")}` : query;
+
     // Check cache
     const { data: cache } = await supabase
       .from("search_cache")
       .select("*")
-      .eq("query", query)
+      .eq("query", cacheKey)
       .gt("expires_at", new Date().toISOString())
       .maybeSingle();
 
