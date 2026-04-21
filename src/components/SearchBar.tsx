@@ -1,4 +1,4 @@
-import { useState, FormEvent } from "react";
+import { useState, useEffect, FormEvent } from "react";
 import { Search, Pill } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Link } from "react-router-dom";
@@ -16,6 +16,10 @@ interface SearchBarProps {
 export function SearchBar({ onSearch, loading, initialQuery = "", showSuggestions = true }: SearchBarProps) {
   const isMobile = useIsMobile();
   const [query, setQuery] = useState(initialQuery);
+
+  useEffect(() => {
+    setQuery(initialQuery);
+  }, [initialQuery]);
 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
