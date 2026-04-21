@@ -35,7 +35,7 @@ export function useFarmaSearch() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const search = async (query: string) => {
+  const search = async (query: string, aliases: string[] = []) => {
     if (!query || query.trim().length < 2) return;
     
     setLoading(true);
@@ -46,8 +46,13 @@ export function useFarmaSearch() {
       const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
       const anonKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 
+      const params = new URLSearchParams({ q: query.trim().toLowerCase() });
+      if (aliases.length > 0) {
+        params.set("aliases", aliases.map((a) => a.trim().toLowerCase()).join(","));
+      }
+
       const response = await fetch(
-        `${supabaseUrl}/functions/v1/farma-search?q=${encodeURIComponent(query.trim().toLowerCase())}`,
+        `${supabaseUrl}/functions/v1/farma-search?${params.toString()}`,
         {
           headers: {
             Authorization: `Bearer ${anonKey}`,
