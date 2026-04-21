@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 
 export interface ProductWithPharmacy {
   id: string;
@@ -34,9 +34,12 @@ export function useFarmaSearch() {
   const [results, setResults] = useState<SearchResult | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const requestIdRef = useRef(0);
 
   const search = async (query: string, aliases: string[] = []) => {
     if (!query || query.trim().length < 2) return;
+
+    const requestId = ++requestIdRef.current;
     
     setLoading(true);
     setError(null);
@@ -61,6 +64,8 @@ export function useFarmaSearch() {
         }
       );
 
+      if (requestId !== requestIdRef.current) return;
+
       if (!response.ok) {
         const err = await response.json();
         if (response.status === 429) {
@@ -71,11 +76,13 @@ export function useFarmaSearch() {
       }
 
       const data: SearchResult = await response.json();
-      setResults(data);
+      if (requestId === requestIdRef.current) setResults(data);
     } catch (err: any) {
-      setError(err.message || "Errore sconosciuto");
+      if (requestId === requestIdRef.current) {
+        setError(err.message || "Errore sconosciuto");
+      }
     } finally {
-      setLoading(false);
+      if (requestId === requestIdRef.current) setLoading(false);
     }
   };
 
