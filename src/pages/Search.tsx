@@ -6,7 +6,7 @@ import { ResultsTable } from "@/components/ResultsTable";
 import { LoadingSkeleton } from "@/components/LoadingSkeleton";
 import { useFarmaSearch } from "@/hooks/useFarmaSearch";
 import { fromSlug, toSlug } from "@/lib/principiAttivi";
-import { brandToActive } from "@/lib/brandToActive";
+import { brandToActive, activeToBrands } from "@/lib/brandToActive";
 
 const Search = () => {
   const { query: rawQuery } = useParams<{ query: string }>();
