@@ -542,8 +542,8 @@ Deno.serve(async (req) => {
     }
 
     // Upsert cache
-    await supabase.from("search_cache").delete().eq("query", query);
-    await supabase.from("search_cache").insert({ query, result_count: allProducts.length });
+    await supabase.from("search_cache").delete().eq("query", cacheKey);
+    await supabase.from("search_cache").insert({ query: cacheKey, result_count: allProducts.length });
 
     // Fetch with pharmacy info
     const { data: finalProducts } = await supabase
