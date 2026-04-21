@@ -119,8 +119,15 @@ function buildProduct(name: string, price: number, url: string | null, image: st
 }
 
 function filterByQuery(products: ProductResult[], query: string): ProductResult[] {
-  const keyword = query.toLowerCase().split(" ")[0];
-  return products.filter(p => p.name.toLowerCase().includes(keyword) && p.price > 0);
+  // query può contenere più keyword separate da "|" (principio attivo + brand alias)
+  const keywords = query
+    .toLowerCase()
+    .split("|")
+    .map((k) => k.trim().split(/\s+/)[0])
+    .filter(Boolean);
+  return products.filter(
+    (p) => p.price > 0 && keywords.some((k) => p.name.toLowerCase().includes(k)),
+  );
 }
 
 // ============ FARMAE (Shopify) ============
