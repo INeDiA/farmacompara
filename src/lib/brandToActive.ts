@@ -152,3 +152,17 @@ export function brandToActive(query: string): string | null {
   const key = normalize(query);
   return BRAND_TO_ACTIVE[key] ?? null;
 }
+
+/**
+ * Dato un principio attivo, ritorna la lista di brand commerciali mappati.
+ * Confronto case-insensitive.
+ */
+export function activeToBrands(active: string): string[] {
+  if (!active) return [];
+  const target = active.trim().toLowerCase();
+  const brands: string[] = [];
+  for (const [brand, princ] of Object.entries(BRAND_TO_ACTIVE)) {
+    if (princ.toLowerCase() === target) brands.push(brand);
+  }
+  return brands;
+}
