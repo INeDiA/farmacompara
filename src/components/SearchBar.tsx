@@ -17,6 +17,10 @@ export function SearchBar({ onSearch, loading, initialQuery = "", showSuggestion
   const isMobile = useIsMobile();
   const [query, setQuery] = useState(initialQuery);
 
+  useEffect(() => {
+    setQuery(initialQuery);
+  }, [initialQuery]);
+
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
     if (query.trim().length >= 2) onSearch(query.trim());
