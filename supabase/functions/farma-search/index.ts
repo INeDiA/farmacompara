@@ -413,6 +413,10 @@ Deno.serve(async (req) => {
     }
 
     const query = url.searchParams.get("q")?.trim().toLowerCase();
+    const aliasesParam = url.searchParams.get("aliases")?.trim().toLowerCase() || "";
+    const aliases = aliasesParam
+      ? aliasesParam.split(",").map((a) => a.trim()).filter((a) => a.length >= 2 && a !== query)
+      : [];
 
     if (!query || query.length < 2) {
       return new Response(
@@ -420,6 +424,11 @@ Deno.serve(async (req) => {
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
+
+    // Termini su cui interrogare gli scraper: principio attivo + eventuali brand alias
+    const searchTerms = [query, ...aliases];
+    // Pattern usato per filtrare i risultati (match se contiene una qualunque keyword)
+    const filterPattern = searchTerms.join("|");
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
