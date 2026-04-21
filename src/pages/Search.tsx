@@ -1,17 +1,30 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
-import { Pill, TrendingDown, Shield, Truck } from "lucide-react";
+import { Pill, Info, X } from "lucide-react";
 import { SearchBar } from "@/components/SearchBar";
 import { ResultsTable } from "@/components/ResultsTable";
 import { LoadingSkeleton } from "@/components/LoadingSkeleton";
 import { useFarmaSearch } from "@/hooks/useFarmaSearch";
-import { fromSlug } from "@/lib/principiAttivi";
+import { fromSlug, toSlug } from "@/lib/principiAttivi";
+import { brandToActive } from "@/lib/brandToActive";
 
 const Search = () => {
   const { query: rawQuery } = useParams<{ query: string }>();
+  const [searchParams] = [new URLSearchParams(typeof window !== "undefined" ? window.location.search : "")];
+  const literal = searchParams.get("literal") === "1";
+  const fromBrand = searchParams.get("brand") || null;
   const navigate = useNavigate();
   const query = rawQuery ? fromSlug(rawQuery) : "";
   const { results, loading, error, search, reset } = useFarmaSearch();
+
+  // Redirect brand → principio attivo (a meno che ?literal=1)
+  useEffect(() => {
+    if (!query || literal) return;
+    const active = brandToActive(query);
+    if (active && active.toLowerCase() !== query.toLowerCase()) {
+      navigate(`/cerca/${toSlug(active)}?brand=${encodeURIComponent(query)}`, { replace: true });
+    }
+  }, [query, literal, navigate]);
 
   // Helper to set or create a meta tag
   const setMeta = (attr: string, value: string, content: string) => {
@@ -175,6 +188,21 @@ const Search = () => {
 
       <main className="container mx-auto px-4 py-8">
         <SearchBar onSearch={handleSearch} loading={loading} initialQuery={query} />
+
+        {fromBrand && query && (
+          <div className="mt-4 p-3 rounded-xl bg-primary/10 border border-primary/20 flex items-start gap-2">
+            <Info className="h-4 w-4 text-primary mt-0.5 shrink-0" />
+            <p className="text-sm text-foreground flex-1">
+              <strong>"{fromBrand.charAt(0).toUpperCase() + fromBrand.slice(1)}"</strong> è un nome commerciale di <strong>{query.charAt(0).toUpperCase() + query.slice(1)}</strong>. Mostriamo tutti i prodotti a base di questo principio attivo.{" "}
+              <Link
+                to={`/cerca/${toSlug(fromBrand)}?literal=1`}
+                className="text-primary hover:underline font-medium"
+              >
+                Cerca solo "{fromBrand}"
+              </Link>
+            </p>
+          </div>
+        )}
 
         {query && (
           <div className="mt-6">
