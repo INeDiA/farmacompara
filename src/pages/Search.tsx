@@ -6,7 +6,7 @@ import { ResultsTable } from "@/components/ResultsTable";
 import { LoadingSkeleton } from "@/components/LoadingSkeleton";
 import { useFarmaSearch } from "@/hooks/useFarmaSearch";
 import { fromSlug, toSlug } from "@/lib/principiAttivi";
-import { brandToActive } from "@/lib/brandToActive";
+import { brandToActive, activeToBrands } from "@/lib/brandToActive";
 
 const Search = () => {
   const { query: rawQuery } = useParams<{ query: string }>();
@@ -158,16 +158,19 @@ const Search = () => {
     };
   }, [query, rawQuery]);
 
-  // Auto-search when query changes
+  // Auto-search when query changes. Se il query è un principio attivo con brand mappati,
+  // li passiamo come alias così la ricerca trova anche prodotti col solo nome commerciale.
   useEffect(() => {
     if (query) {
-      search(query);
+      const aliases = literal ? [] : activeToBrands(query);
+      search(query, aliases);
     }
-  }, [query]);
+  }, [query, literal]);
 
   const handleSearch = (q: string) => {
     navigate(`/cerca/${encodeURIComponent(q.toLowerCase())}`, { replace: true });
-    search(q);
+    const aliases = activeToBrands(q);
+    search(q, aliases);
   };
 
   return (

@@ -119,8 +119,15 @@ function buildProduct(name: string, price: number, url: string | null, image: st
 }
 
 function filterByQuery(products: ProductResult[], query: string): ProductResult[] {
-  const keyword = query.toLowerCase().split(" ")[0];
-  return products.filter(p => p.name.toLowerCase().includes(keyword) && p.price > 0);
+  // query può contenere più keyword separate da "|" (principio attivo + brand alias)
+  const keywords = query
+    .toLowerCase()
+    .split("|")
+    .map((k) => k.trim().split(/\s+/)[0])
+    .filter(Boolean);
+  return products.filter(
+    (p) => p.price > 0 && keywords.some((k) => p.name.toLowerCase().includes(k)),
+  );
 }
 
 // ============ FARMAE (Shopify) ============
@@ -406,6 +413,10 @@ Deno.serve(async (req) => {
     }
 
     const query = url.searchParams.get("q")?.trim().toLowerCase();
+    const aliasesParam = url.searchParams.get("aliases")?.trim().toLowerCase() || "";
+    const aliases = aliasesParam
+      ? aliasesParam.split(",").map((a) => a.trim()).filter((a) => a.length >= 2 && a !== query)
+      : [];
 
     if (!query || query.length < 2) {
       return new Response(
@@ -413,6 +424,11 @@ Deno.serve(async (req) => {
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
+
+    // Termini su cui interrogare gli scraper: principio attivo + eventuali brand alias
+    const searchTerms = [query, ...aliases];
+    // Pattern usato per filtrare i risultati (match se contiene una qualunque keyword)
+    const filterPattern = searchTerms.join("|");
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -428,11 +444,14 @@ Deno.serve(async (req) => {
       );
     }
 
+    // Cache key: principio attivo + alias (così aggiungere/rimuovere brand invalida la cache)
+    const cacheKey = aliases.length > 0 ? `${query}|${aliases.join(",")}` : query;
+
     // Check cache
     const { data: cache } = await supabase
       .from("search_cache")
       .select("*")
-      .eq("query", query)
+      .eq("query", cacheKey)
       .gt("expires_at", new Date().toISOString())
       .maybeSingle();
 
@@ -464,12 +483,30 @@ Deno.serve(async (req) => {
       pharmacyIdMap[p.name] = p.id;
     }
 
-    // Scrape all in parallel
+    // Scrape: per ogni scraper, esegui ricerca su tutti i termini (principio attivo + brand alias)
+    // Il filtro accetta match su una qualunque keyword (filterPattern = "term1|term2|...")
     const results = await Promise.all(
       scrapers.map(async (s) => {
-        const products = await s.scrape(query);
-        return { pharmacyName: s.pharmacyName, products };
-      })
+        const perTerm = await Promise.all(
+          searchTerms.map(async (term) => {
+            const products = await s.scrape(term);
+            // Re-filtra con il pattern combinato così non perdiamo brand match dentro risultati di altri termini
+            return filterByQuery(products, filterPattern);
+          }),
+        );
+        // Dedup per URL prodotto (fallback sul nome)
+        const seen = new Set<string>();
+        const merged: ProductResult[] = [];
+        for (const list of perTerm) {
+          for (const p of list) {
+            const key = (p.product_url || p.name).toLowerCase();
+            if (seen.has(key)) continue;
+            seen.add(key);
+            merged.push(p);
+          }
+        }
+        return { pharmacyName: s.pharmacyName, products: merged };
+      }),
     );
 
     // Delete old products for this query
@@ -505,8 +542,8 @@ Deno.serve(async (req) => {
     }
 
     // Upsert cache
-    await supabase.from("search_cache").delete().eq("query", query);
-    await supabase.from("search_cache").insert({ query, result_count: allProducts.length });
+    await supabase.from("search_cache").delete().eq("query", cacheKey);
+    await supabase.from("search_cache").insert({ query: cacheKey, result_count: allProducts.length });
 
     // Fetch with pharmacy info
     const { data: finalProducts } = await supabase
