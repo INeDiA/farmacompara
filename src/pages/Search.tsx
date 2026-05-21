@@ -39,16 +39,22 @@ const Search = () => {
 
   // Set document title, meta, canonical, OG & Twitter
   useEffect(() => {
+    const homeTitle = "FarmaCompara — Confronto prezzi farmaci al grammo";
+    const homeDesc = "Confronta il costo al grammo di principio attivo tra farmacie online italiane.";
+    const homeUrl = "https://farmacompara.it/";
+
     if (query) {
       const capitalized = query.charAt(0).toUpperCase() + query.slice(1);
-      const pageTitle = `${capitalized}: prezzo al grammo tra farmacie online | FarmaCompara`;
-      const pageDesc = `Quanto costa ${capitalized} al grammo di principio attivo? Confronta il costo normalizzato tra farmacie online italiane e trova la confezione più conveniente.`;
+      // Keep titles under 60 chars even for long molecules (max ~25)
+      const pageTitle = `${capitalized} — prezzo al grammo | FarmaCompara`;
+      // Keep description under 160 chars even for long molecules
+      const pageDesc = `Confronta il prezzo al grammo di ${capitalized} tra farmacie online italiane. Trova la confezione più conveniente.`;
       const pageUrl = `https://farmacompara.it/cerca/${rawQuery}`;
 
       document.title = pageTitle;
       setMeta("name", "description", pageDesc);
 
-      // Canonical
+      // Canonical (update href in place if present)
       let canonical = document.querySelector('link[rel="canonical"]') as HTMLLinkElement;
       if (!canonical) {
         canonical = document.createElement("link");
@@ -57,26 +63,21 @@ const Search = () => {
       }
       canonical.setAttribute("href", pageUrl);
 
-      // Open Graph
       setMeta("property", "og:title", pageTitle);
       setMeta("property", "og:description", pageDesc);
       setMeta("property", "og:url", pageUrl);
-
-      // Twitter
       setMeta("name", "twitter:title", pageTitle);
       setMeta("name", "twitter:description", pageDesc);
     }
     return () => {
-      document.title = "FarmaCompara — Prezzo al grammo di principio attivo tra farmacie online";
-      const canonical = document.querySelector('link[rel="canonical"]');
-      if (canonical) canonical.remove();
-      // Restore homepage OG/Twitter
-      const homeName = "FarmaCompara — Prezzo al grammo di principio attivo tra farmacie online";
-      const homeDesc = "Confronta il costo al grammo di principio attivo tra farmacie online italiane. Stessa molecola, confezioni diverse: scopri quale conviene davvero.";
-      setMeta("property", "og:title", homeName);
+      document.title = homeTitle;
+      setMeta("name", "description", homeDesc);
+      const canonical = document.querySelector('link[rel="canonical"]') as HTMLLinkElement | null;
+      if (canonical) canonical.setAttribute("href", homeUrl);
+      setMeta("property", "og:title", homeTitle);
       setMeta("property", "og:description", homeDesc);
-      setMeta("property", "og:url", "https://farmacompara.it/");
-      setMeta("name", "twitter:title", homeName);
+      setMeta("property", "og:url", homeUrl);
+      setMeta("name", "twitter:title", homeTitle);
       setMeta("name", "twitter:description", homeDesc);
     };
   }, [query, rawQuery]);

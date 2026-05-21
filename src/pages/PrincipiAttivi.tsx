@@ -5,12 +5,76 @@ import { ALL_PRINCIPI_ATTIVI, toSlug } from "@/lib/principiAttivi";
 
 const PrincipiAttivi = () => {
   useEffect(() => {
-    document.title = "Principi attivi — Prezzo al grammo tra farmacie online | FarmaCompara";
-    const meta = document.querySelector('meta[name="description"]');
-    if (meta) {
-      meta.setAttribute("content", "Elenco completo dei principi attivi. Confronta il costo al grammo di ogni molecola tra farmacie online italiane.");
+    const pageTitle = "Principi attivi — prezzo al grammo | FarmaCompara";
+    const pageDesc = "Elenco completo dei principi attivi. Confronta il costo al grammo di ogni molecola tra farmacie online italiane.";
+    const pageUrl = "https://farmacompara.it/principi-attivi";
+
+    document.title = pageTitle;
+
+    const setMeta = (attr: string, value: string, content: string) => {
+      let el = document.querySelector(`meta[${attr}="${value}"]`);
+      if (!el) {
+        el = document.createElement("meta");
+        el.setAttribute(attr.split("=")[0], value);
+        document.head.appendChild(el);
+      }
+      el.setAttribute("content", content);
+    };
+
+    setMeta("name", "description", pageDesc);
+    setMeta("property", "og:title", pageTitle);
+    setMeta("property", "og:description", pageDesc);
+    setMeta("property", "og:url", pageUrl);
+    setMeta("name", "twitter:title", pageTitle);
+    setMeta("name", "twitter:description", pageDesc);
+
+    // Self-referencing canonical
+    let canonical = document.querySelector('link[rel="canonical"]') as HTMLLinkElement;
+    if (!canonical) {
+      canonical = document.createElement("link");
+      canonical.setAttribute("rel", "canonical");
+      document.head.appendChild(canonical);
     }
-    return () => { document.title = "FarmaCompara — Prezzo al grammo di principio attivo tra farmacie online"; };
+    canonical.setAttribute("href", pageUrl);
+
+    // CollectionPage / ItemList JSON-LD
+    const jsonLd = {
+      "@context": "https://schema.org",
+      "@type": "CollectionPage",
+      "name": pageTitle,
+      "url": pageUrl,
+      "description": pageDesc,
+      "mainEntity": {
+        "@type": "ItemList",
+        "numberOfItems": ALL_PRINCIPI_ATTIVI.length,
+        "itemListElement": ALL_PRINCIPI_ATTIVI.map((name, i) => ({
+          "@type": "ListItem",
+          "position": i + 1,
+          "name": name,
+          "url": `https://farmacompara.it/cerca/${toSlug(name)}`,
+        })),
+      },
+    };
+    const script = document.createElement("script");
+    script.type = "application/ld+json";
+    script.id = "principi-attivi-jsonld";
+    script.textContent = JSON.stringify(jsonLd);
+    document.head.appendChild(script);
+
+    return () => {
+      document.title = "FarmaCompara — Confronto prezzi farmaci al grammo";
+      const c = document.querySelector('link[rel="canonical"]');
+      if (c) c.setAttribute("href", "https://farmacompara.it/");
+      const homeName = "FarmaCompara — Confronto prezzi farmaci al grammo";
+      const homeDesc = "Confronta il costo al grammo di principio attivo tra farmacie online italiane.";
+      setMeta("property", "og:title", homeName);
+      setMeta("property", "og:description", homeDesc);
+      setMeta("property", "og:url", "https://farmacompara.it/");
+      setMeta("name", "twitter:title", homeName);
+      setMeta("name", "twitter:description", homeDesc);
+      const el = document.getElementById("principi-attivi-jsonld");
+      if (el) el.remove();
+    };
   }, []);
 
   return (
@@ -29,7 +93,7 @@ const PrincipiAttivi = () => {
       <main className="container mx-auto px-4 py-8 max-w-4xl">
         <div className="space-y-6">
           <div className="space-y-2">
-            <h2 className="text-3xl font-bold tracking-tight">Tutti i principi attivi</h2>
+            <h1 className="text-3xl font-bold tracking-tight">Tutti i principi attivi</h1>
             <p className="text-muted-foreground">
               Confronta il costo al grammo di principio attivo tra farmacie online italiane.
               Seleziona una molecola per vedere i prezzi.

@@ -192,6 +192,7 @@ export function ResultsTable({ products, fromCache }: ResultsTableProps) {
                       href={addUtmParams(p.product_url, p.active_ingredient)}
                       target="_blank"
                       rel="noopener noreferrer"
+                      aria-label={`Vai al sito della farmacia ${p.pharmacies.name} per ${p.name}`}
                       className="text-primary hover:text-primary/80"
                     >
                       <ExternalLink className="h-4 w-4" />

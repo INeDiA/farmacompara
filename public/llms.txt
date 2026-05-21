@@ -1,0 +1,17 @@
+# FarmaCompara
+
+> Confronto del prezzo al grammo di principio attivo tra farmacie online italiane. Stessa molecola, confezioni diverse: scopri quale conviene davvero.
+
+FarmaCompara raccoglie in tempo reale i prezzi dei farmaci da banco (OTC) e dei principali integratori da farmacie online italiane autorizzate e li normalizza al costo per grammo di principio attivo, tenendo conto di dosaggio, quantità e spese di spedizione. Esclude i farmaci con obbligo di prescrizione medica come previsto dalla normativa italiana.
+
+## Pages
+
+- [Home](/): ricerca di un principio attivo o nome commerciale e confronto immediato dei prezzi.
+- [Tutti i principi attivi](/principi-attivi): elenco completo delle molecole monitorate.
+
+## Esempi di confronto
+
+- [Paracetamolo](/cerca/paracetamolo): prezzo al grammo tra farmacie online.
+- [Ibuprofene](/cerca/ibuprofene): confronto confezioni e brand (es. Moment, Nurofen).
+- [Acido acetilsalicilico](/cerca/acido%20acetilsalicilico): include i nomi commerciali (es. Aspirina, Cardirene).
+- [Vitamina D3](/cerca/vitamina%20d3): integratori a confronto.

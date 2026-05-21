@@ -77,29 +77,32 @@ const Index = () => {
             <SearchBar onSearch={handleSearch} />
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 max-w-2xl mx-auto mt-8 sm:order-1">
-            <div className="flex flex-col items-center gap-2 p-4 rounded-2xl bg-card border">
-              <TrendingDown className="h-6 w-6 text-primary" />
-              <p className="text-sm font-medium">Prezzo/g</p>
-              <p className="text-xs text-muted-foreground text-center">
-                Confronto basato sul costo per grammo di principio attivo, non sul prezzo della confezione
-              </p>
+          <section aria-labelledby="features-heading" className="sm:order-1 mt-8">
+            <h2 id="features-heading" className="sr-only">Come funziona FarmaCompara</h2>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 max-w-2xl mx-auto">
+              <div className="flex flex-col items-center gap-2 p-4 rounded-2xl bg-card border">
+                <TrendingDown className="h-6 w-6 text-primary" />
+                <h3 className="text-sm font-medium">Prezzo/g</h3>
+                <p className="text-xs text-muted-foreground text-center">
+                  Confronto basato sul costo per grammo di principio attivo, non sul prezzo della confezione
+                </p>
+              </div>
+              <div className="flex flex-col items-center gap-2 p-4 rounded-2xl bg-card border">
+                <Truck className="h-6 w-6 text-primary" />
+                <h3 className="text-sm font-medium">Spedizione</h3>
+                <p className="text-xs text-muted-foreground text-center">
+                  Costo di spedizione sempre visibile nel confronto
+                </p>
+              </div>
+              <div className="flex flex-col items-center gap-2 p-4 rounded-2xl bg-card border">
+                <Shield className="h-6 w-6 text-primary" />
+                <h3 className="text-sm font-medium">Farmacie online</h3>
+                <p className="text-xs text-muted-foreground text-center">
+                  Risultati da farmacie online autorizzate che spediscono in tutta Italia
+                </p>
+              </div>
             </div>
-            <div className="flex flex-col items-center gap-2 p-4 rounded-2xl bg-card border">
-              <Truck className="h-6 w-6 text-primary" />
-              <p className="text-sm font-medium">Spedizione</p>
-              <p className="text-xs text-muted-foreground text-center">
-                Costo di spedizione sempre visibile nel confronto
-              </p>
-            </div>
-            <div className="flex flex-col items-center gap-2 p-4 rounded-2xl bg-card border">
-              <Shield className="h-6 w-6 text-primary" />
-              <p className="text-sm font-medium">Farmacie online</p>
-              <p className="text-xs text-muted-foreground text-center">
-                Risultati da farmacie online autorizzate che spediscono in tutta Italia
-              </p>
-            </div>
-          </div>
+          </section>
         </div>
       </main>
 
