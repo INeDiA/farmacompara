@@ -76,7 +76,7 @@ export function SearchBar({ onSearch, loading, initialQuery = "", showSuggestion
   const [query, setQuery] = useState(initialQuery);
   const [open, setOpen] = useState(false);
   const [highlight, setHighlight] = useState(0);
-  const wrapRef = useRef<HTMLDivElement>(null);
+  const wrapRef = useRef<HTMLFormElement>(null);
 
   useEffect(() => {
     setQuery(initialQuery);
