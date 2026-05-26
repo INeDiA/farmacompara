@@ -181,7 +181,7 @@ async function scrapeEfarma(query: string): Promise<ProductResult[]> {
         method: "POST",
         headers: {
           "x-algolia-application-id": "70OAFALOKQ",
-          "x-algolia-api-key": "ZmIzN2IwYTExMmEwNTRhOTVmMjVhNzc0NDQ4NDIzZjQ4NmJlYzIzMWMzYWRiYjg2N2QxMzhhNjBiOWUxNDQ3MXRhZ0ZpbHRlcnM9JnZhbGlkVW50aWw9MTc3NTU0ODk2OA==",
+          "x-algolia-api-key": EFARMA_ALGOLIA_KEY,
           "Content-Type": "application/json",
         },
         body: JSON.stringify({ query, hitsPerPage: 20, attributesToRetrieve: ["name", "price", "url", "image_url", "thumbnail_url"] }),
