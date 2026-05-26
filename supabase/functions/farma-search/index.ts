@@ -8,6 +8,14 @@ const corsHeaders = {
 
 const UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36";
 
+// API keys esternalizzate con fallback. Override via secrets quando scadono.
+const EFARMA_ALGOLIA_KEY = Deno.env.get("EFARMA_ALGOLIA_KEY")
+  ?? "ZmIzN2IwYTExMmEwNTRhOTVmMjVhNzc0NDQ4NDIzZjQ4NmJlYzIzMWMzYWRiYjg2N2QxMzhhNjBiOWUxNDQ3MXRhZ0ZpbHRlcnM9JnZhbGlkVW50aWw9MTc3NTU0ODk2OA==";
+const FARMACIE_1000_ALGOLIA_KEY = Deno.env.get("FARMACIE_1000_ALGOLIA_KEY")
+  ?? "a44069a5116559934332f93aa82d91d8";
+const SEKEN_API_KEY = Deno.env.get("SEKEN_API_KEY")
+  ?? "b412b9e78e0e28d4ac7935779888de72:5e27deb5ae00268c0bec330e754cb04e";
+
 interface ProductResult {
   name: string;
   price: number;
