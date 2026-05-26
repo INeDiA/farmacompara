@@ -309,7 +309,7 @@ async function scrapeFarmaciaUno(query: string): Promise<ProductResult[]> {
     const res = await fetch("https://open.seken.ai/api/search", {
       method: "POST",
       headers: {
-        "Authorization": "Bearer b412b9e78e0e28d4ac7935779888de72:5e27deb5ae00268c0bec330e754cb04e",
+        "Authorization": `Bearer ${SEKEN_API_KEY}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({ query, limit: 20 }),
