@@ -8,6 +8,14 @@ const corsHeaders = {
 
 const UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36";
 
+// API keys esternalizzate con fallback. Override via secrets quando scadono.
+const EFARMA_ALGOLIA_KEY = Deno.env.get("EFARMA_ALGOLIA_KEY")
+  ?? "ZmIzN2IwYTExMmEwNTRhOTVmMjVhNzc0NDQ4NDIzZjQ4NmJlYzIzMWMzYWRiYjg2N2QxMzhhNjBiOWUxNDQ3MXRhZ0ZpbHRlcnM9JnZhbGlkVW50aWw9MTc3NTU0ODk2OA==";
+const FARMACIE_1000_ALGOLIA_KEY = Deno.env.get("FARMACIE_1000_ALGOLIA_KEY")
+  ?? "a44069a5116559934332f93aa82d91d8";
+const SEKEN_API_KEY = Deno.env.get("SEKEN_API_KEY")
+  ?? "b412b9e78e0e28d4ac7935779888de72:5e27deb5ae00268c0bec330e754cb04e";
+
 interface ProductResult {
   name: string;
   price: number;
@@ -118,16 +126,33 @@ function buildProduct(name: string, price: number, url: string | null, image: st
   return { name, price, dosage_mg: dosage, quantity: qty, total_mg, price_per_mg, product_url: url, image_url: image };
 }
 
+function significantTokens(keyword: string): string[] {
+  // Split su spazi, trattini, slash. Tieni i token "discriminanti":
+  // - se contiene cifre → lunghezza ≥ 2 (es. "d3", "b12")
+  // - altrimenti → lunghezza ≥ 6 (es. "acetilsalicilico", "ibuprofen", "diclofenac")
+  // Fallback su token ≥ 3 chars se nessuno passa.
+  const all = keyword.toLowerCase().split(/[\s\-/]+/).filter(Boolean);
+  const significant = all.filter((t) => (/\d/.test(t) ? t.length >= 2 : t.length >= 6));
+  if (significant.length > 0) return significant;
+  return all.filter((t) => t.length >= 3);
+}
+
 function filterByQuery(products: ProductResult[], query: string): ProductResult[] {
-  // query può contenere più keyword separate da "|" (principio attivo + brand alias)
-  const keywords = query
+  // query può contenere più keyword separate da "|" (principio attivo + brand alias).
+  // Per ciascuna keyword estraiamo i token "discriminanti" e richiediamo che TUTTI
+  // i token di almeno UNA keyword siano presenti nel nome prodotto.
+  // Evita falsi positivi tipo "Acido folico" quando cerchi "Acido acetilsalicilico".
+  const keywordTokens = query
     .toLowerCase()
     .split("|")
-    .map((k) => k.trim().split(/\s+/)[0])
-    .filter(Boolean);
-  return products.filter(
-    (p) => p.price > 0 && keywords.some((k) => p.name.toLowerCase().includes(k)),
-  );
+    .map((k) => significantTokens(k))
+    .filter((toks) => toks.length > 0);
+  if (keywordTokens.length === 0) return products.filter((p) => p.price > 0);
+  return products.filter((p) => {
+    if (p.price <= 0) return false;
+    const name = p.name.toLowerCase();
+    return keywordTokens.some((tokens) => tokens.every((t) => name.includes(t)));
+  });
 }
 
 // ============ FARMAE (Shopify) ============
@@ -156,7 +181,7 @@ async function scrapeEfarma(query: string): Promise<ProductResult[]> {
         method: "POST",
         headers: {
           "x-algolia-application-id": "70OAFALOKQ",
-          "x-algolia-api-key": "ZmIzN2IwYTExMmEwNTRhOTVmMjVhNzc0NDQ4NDIzZjQ4NmJlYzIzMWMzYWRiYjg2N2QxMzhhNjBiOWUxNDQ3MXRhZ0ZpbHRlcnM9JnZhbGlkVW50aWw9MTc3NTU0ODk2OA==",
+          "x-algolia-api-key": EFARMA_ALGOLIA_KEY,
           "Content-Type": "application/json",
         },
         body: JSON.stringify({ query, hitsPerPage: 20, attributesToRetrieve: ["name", "price", "url", "image_url", "thumbnail_url"] }),
@@ -229,7 +254,7 @@ async function scrape1000Farmacie(query: string): Promise<ProductResult[]> {
         method: "POST",
         headers: {
           "x-algolia-application-id": "HW3T8WVS73",
-          "x-algolia-api-key": "a44069a5116559934332f93aa82d91d8",
+          "x-algolia-api-key": FARMACIE_1000_ALGOLIA_KEY,
           "Content-Type": "application/json",
         },
         body: JSON.stringify({ query, hitsPerPage: 20 }),
@@ -284,7 +309,7 @@ async function scrapeFarmaciaUno(query: string): Promise<ProductResult[]> {
     const res = await fetch("https://open.seken.ai/api/search", {
       method: "POST",
       headers: {
-        "Authorization": "Bearer b412b9e78e0e28d4ac7935779888de72:5e27deb5ae00268c0bec330e754cb04e",
+        "Authorization": `Bearer ${SEKEN_API_KEY}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({ query, limit: 20 }),

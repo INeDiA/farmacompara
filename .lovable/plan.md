@@ -1,69 +1,65 @@
+# Implementazione punti 1, 2, 4, 5
 
+## 1 · Fix `filterByQuery` per principi attivi a nome composto
 
-## Piano: Mappatura nome commerciale → principio attivo
+**File**: `supabase/functions/farma-search/index.ts`
 
-### Comportamento attuale
+Sostituisco l'attuale tokenizzazione (`.split(/\s+/)[0]` che teneva solo la prima parola) con una funzione `significantTokens` che:
 
-Cercando "moment" il sistema filtra solo i prodotti con "moment" nel nome. L'utente vede solo i Moment, non tutti gli ibuprofene equivalenti. Si perde il valore comparativo del sito (stessa molecola, confezioni diverse).
+- splitta su spazi, trattini, slash
+- tiene i token "discriminanti": lunghezza ≥ 6, oppure ≥ 2 se contengono cifre (per "d3", "b12")
+- fallback su token ≥ 3 chars se nessuno passa
+- richiede che **tutti** i token di almeno una keyword siano presenti nel nome prodotto
 
-### Soluzione: dizionario brand → principio attivo
+Esempi:
+- `"acido acetilsalicilico"` → `["acetilsalicilico"]` → non matcha più "Acido folico" ✅
+- `"ibuprofen lisina"` → `["ibuprofen", "lisina"]` → entrambi richiesti, non matcha Ibuprofene puro ✅
+- `"vitamina d3"` → `["vitamina", "d3"]` → entrambi richiesti, non matcha Vitamina C ✅
+- `"diclofenac topico"` → `["diclofenac", "topico"]` → non matcha Diclofenac sistemico ✅
 
-Approccio statico, controllabile e zero-latency. Nessuna API esterna, nessun rischio di errori automatici (fondamentale in ambito farmaceutico).
+## 2 · Colonna prezzo finale (con spedizione)
 
-**1. Nuovo file `src/lib/brandToActive.ts`**
+**File**: `src/components/ResultsTable.tsx`
 
-Dizionario dei ~80 brand OTC italiani più cercati mappati al principio attivo già presente nella nostra lista di 52:
-
+Aggiungo helper `effectivePrice(p)`:
 ```
-moment, brufen, nurofen → ibuprofene
-tachipirina, efferalgan, panadol → paracetamolo
-voltaren, dicloreum → diclofenac
-oki, fastum, ketodol → ketoprofene
-aulin → nimesulide
-aspirina, vivin c, cardioaspirin → acido acetilsalicilico
-momendol → naprossene
-daflon, arvenum → diosmina
-fluimucil → n-acetilcisteina
-muc-angin, mucosolvan → ambroxolo
-zirtec, reactine → cetirizina
-clarityn → loratadina
-aerius → desloratadina
-telfast → fexofenadina
-maalox, gaviscon → sodio bicarbonato
-peptazol → pantoprazolo
-lansox → lansoprazolo
-imodium → loperamide
-mylicon → simeticone
-duphalac → lattulosio
-bioscalin, supradyn → (non mappare, multivitaminico)
-cardirene → acido acetilsalicilico
-neo borocillina → benzidamina
-…
+shipping = (free_shipping_threshold && price >= threshold) ? 0 : pharmacy.shipping_cost
+return price + shipping
 ```
 
-**2. Logica di redirect in `src/pages/Search.tsx`**
+- **Desktop**: nuova colonna "Totale" tra "Prezzo" e "Dosaggio" (o dopo "Spedizione"). Evidenziata sul prodotto più conveniente per €/g.
+- **Mobile**: nella card aggiungo una riga `Totale: €X,XX (incl. spedizione)` sotto al prezzo.
+- L'ordinamento principale rimane per €/g (logica edge function invariata).
 
-Quando l'utente cerca un termine:
-- Se il termine corrisponde a una chiave brand → redirect automatico a `/cerca/{principio-attivo}` con un banner informativo: *"'Moment' è un nome commerciale di Ibuprofene. Confronto tutti i prodotti a base di ibuprofene."*
-- Altrimenti → ricerca normale come oggi.
+## 4 · Filtri risultati
 
-Il banner include un link "Cerca solo 'Moment'" per chi vuole il match letterale.
+**File**: `src/components/ResultsTable.tsx` (filtri inline sopra alla lista, per non aggiungere nuovi file).
 
-**3. Suggerimenti in `SearchBar`**
+Tre filtri client-side via `useState`:
 
-Opzionale: quando l'utente digita, suggerire sia il brand sia il principio attivo (es. digitando "mom" → "Moment (Ibuprofene)").
+1. **Forma farmaceutica** — Select shadcn con opzioni rilevate dinamicamente dai prodotti (regex sui nomi: `compresse|capsule|bustine|sciroppo|gel|crema|spray|cerotti|gocce|supposte|fiale`). Default "Tutte".
+2. **Prezzo massimo** — Input number, opzionale. Filtra sul *prezzo effettivo* (con spedizione).
+3. **Solo spedizione gratis** — Checkbox. Tiene solo prodotti dove `effectivePrice === price` (cioè soglia gratuità superata o `shipping_cost = 0`).
 
-### File modificati
+UI: barra compatta sopra alla tabella, collassabile su mobile dietro a un pulsante "Filtri (N attivi)". Counter prodotti aggiornato. Empty state dedicato se i filtri azzerano i risultati.
 
-- `src/lib/brandToActive.ts` — nuovo, dizionario statico
-- `src/pages/Search.tsx` — logica di redirect + banner
-- `src/components/SearchBar.tsx` — opzionale, autocompletamento brand
+## 5 · Esternalizzazione API keys hardcoded
 
-### Cosa NON facciamo (e perché)
+**File**: `supabase/functions/farma-search/index.ts`
 
-- **No API esterne** (es. AIFA, OpenFDA): latenza, rate-limit, copertura italiana incerta, e in farmaceutica un errore di mappatura è un problema serio.
-- **No fuzzy matching automatico**: troppi falsi positivi.
-- **No LLM**: overkill, costoso, non deterministico.
+Le 3 API key Algolia/Seken inline diventano lette da env var, **con fallback al valore attuale** così nulla si rompe:
 
-Il dizionario statico è curato manualmente, verificabile, e copre il 95% delle ricerche reali per brand in Italia.
+```ts
+const EFARMA_ALGOLIA_KEY = Deno.env.get("EFARMA_ALGOLIA_KEY") ?? "<current>";
+const FARMACIE_1000_ALGOLIA_KEY = Deno.env.get("FARMACIE_1000_ALGOLIA_KEY") ?? "<current>";
+const SEKEN_API_KEY = Deno.env.get("SEKEN_API_KEY") ?? "<current>";
+```
 
+Quando una chiave scade (eFarma scade ~marzo 2026) basta aggiungere il secret corrispondente senza redeploy del codice. **Non chiedo i secret ora** — i fallback bastano finché le chiavi attuali sono valide. Quando vorrai ruotarle, dimmelo e attivo `add_secret`.
+
+---
+
+## Out of scope (su tua richiesta non implemento ora)
+
+- Punto 3 (storico prezzi) — feature più grossa, richiede nuova tabella + migration
+- Tutti gli altri suggerimenti dell'analisi precedente
