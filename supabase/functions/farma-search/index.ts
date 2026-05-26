@@ -254,7 +254,7 @@ async function scrape1000Farmacie(query: string): Promise<ProductResult[]> {
         method: "POST",
         headers: {
           "x-algolia-application-id": "HW3T8WVS73",
-          "x-algolia-api-key": "a44069a5116559934332f93aa82d91d8",
+          "x-algolia-api-key": FARMACIE_1000_ALGOLIA_KEY,
           "Content-Type": "application/json",
         },
         body: JSON.stringify({ query, hitsPerPage: 20 }),
