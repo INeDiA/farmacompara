@@ -300,16 +300,19 @@ export function ResultsTable({ products, fromCache }: ResultsTableProps) {
                           )}
                         </p>
                       </div>
-                      {p.product_url && (
-                        <a
-                          href={addUtmParams(p.product_url, p.active_ingredient)}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-primary hover:underline flex items-center gap-1"
-                        >
-                          Vai <ExternalLink className="h-3 w-3" />
-                        </a>
-                      )}
+                      {(() => {
+                        const safeHref = p.product_url ? safeOutboundUrl(p.product_url, p.active_ingredient) : null;
+                        return safeHref ? (
+                          <a
+                            href={safeHref}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-primary hover:underline flex items-center gap-1"
+                          >
+                            Vai <ExternalLink className="h-3 w-3" />
+                          </a>
+                        ) : null;
+                      })()}
                     </div>
                     <p className="flex items-center gap-1 text-[11px] text-muted-foreground">
                       <Truck className="h-3 w-3" />
