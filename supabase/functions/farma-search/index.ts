@@ -447,9 +447,6 @@ Deno.serve(async (req) => {
 
     const query = url.searchParams.get("q")?.trim().toLowerCase();
     const aliasesParam = url.searchParams.get("aliases")?.trim().toLowerCase() || "";
-    const aliases = aliasesParam
-      ? aliasesParam.split(",").map((a) => a.trim()).filter((a) => a.length >= 2 && a !== query)
-      : [];
 
     if (!query || query.length < 2) {
       return new Response(
@@ -457,6 +454,24 @@ Deno.serve(async (req) => {
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
+    if (query.length > 100) {
+      return new Response(
+        JSON.stringify({ error: "Parametro 'q' troppo lungo (max 100 caratteri)" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Cap aliases to prevent scraper request amplification:
+    // total external requests = scrapers.length × (1 + aliases.length).
+    const MAX_ALIASES = 5;
+    const MAX_ALIAS_LEN = 50;
+    const aliases = aliasesParam
+      ? aliasesParam
+          .split(",")
+          .map((a) => a.trim())
+          .filter((a) => a.length >= 2 && a.length <= MAX_ALIAS_LEN && a !== query)
+          .slice(0, MAX_ALIASES)
+      : [];
 
     // Termini su cui interrogare gli scraper: principio attivo + eventuali brand alias
     const searchTerms = [query, ...aliases];
