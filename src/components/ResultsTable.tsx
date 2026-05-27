@@ -366,7 +366,12 @@ export function ResultsTable({ products, fromCache }: ResultsTableProps) {
                         )}
                       </TableCell>
                       <TableCell className="max-w-[250px]">
-                        <span className="line-clamp-2 text-sm">{p.name}</span>
+                        <Link
+                          to={`/prodotto/${toSlug(p.active_ingredient)}/${productSlug(p.name, p.pharmacies.name)}`}
+                          className="line-clamp-2 text-sm hover:text-primary hover:underline"
+                        >
+                          {p.name}
+                        </Link>
                       </TableCell>
                       <TableCell>
                         <span className="text-sm font-medium">{p.pharmacies.name}</span>
