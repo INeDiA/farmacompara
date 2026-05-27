@@ -56,6 +56,15 @@ function formatShipping(pharmacy: ProductWithPharmacy["pharmacies"]): string {
   return formatPrice(pharmacy.shipping_cost);
 }
 
+function isSafeUrl(url: string): boolean {
+  try {
+    const { protocol } = new URL(url);
+    return protocol === "https:" || protocol === "http:";
+  } catch {
+    return false;
+  }
+}
+
 function stripSearchParam(url: string): string {
   try {
     const u = new URL(url);
@@ -66,7 +75,8 @@ function stripSearchParam(url: string): string {
   }
 }
 
-function addUtmParams(url: string, activeIngredient: string): string {
+function safeOutboundUrl(url: string, activeIngredient: string): string | null {
+  if (!isSafeUrl(url)) return null;
   const cleaned = stripSearchParam(url);
   const separator = cleaned.includes("?") ? "&" : "?";
   return `${cleaned}${separator}utm_source=farmacompara&utm_medium=referral&utm_campaign=confronto_prezzi&utm_content=${encodeURIComponent(activeIngredient)}`;
