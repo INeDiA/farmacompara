@@ -8,13 +8,11 @@ const corsHeaders = {
 
 const UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36";
 
-// API keys esternalizzate con fallback. Override via secrets quando scadono.
-const EFARMA_ALGOLIA_KEY = Deno.env.get("EFARMA_ALGOLIA_KEY")
-  ?? "ZmIzN2IwYTExMmEwNTRhOTVmMjVhNzc0NDQ4NDIzZjQ4NmJlYzIzMWMzYWRiYjg2N2QxMzhhNjBiOWUxNDQ3MXRhZ0ZpbHRlcnM9JnZhbGlkVW50aWw9MTc3NTU0ODk2OA==";
-const FARMACIE_1000_ALGOLIA_KEY = Deno.env.get("FARMACIE_1000_ALGOLIA_KEY")
-  ?? "a44069a5116559934332f93aa82d91d8";
-const SEKEN_API_KEY = Deno.env.get("SEKEN_API_KEY")
-  ?? "b412b9e78e0e28d4ac7935779888de72:5e27deb5ae00268c0bec330e754cb04e";
+// API keys lette esclusivamente dai secret dell'edge function.
+// Se mancanti, lo scraper della relativa fonte viene saltato.
+const EFARMA_ALGOLIA_KEY = Deno.env.get("EFARMA_ALGOLIA_KEY") ?? "";
+const FARMACIE_1000_ALGOLIA_KEY = Deno.env.get("FARMACIE_1000_ALGOLIA_KEY") ?? "";
+const SEKEN_API_KEY = Deno.env.get("SEKEN_API_KEY") ?? "";
 
 interface ProductResult {
   name: string;
@@ -402,9 +400,19 @@ async function checkRateLimit(supabase: any, ip: string): Promise<{ blocked: boo
 }
 
 function getClientIp(req: Request): string {
-  return req.headers.get("x-forwarded-for")?.split(",")[0]?.trim()
-    || req.headers.get("cf-connecting-ip")
-    || "unknown";
+  // Prefer trusted proxy-set headers. For x-forwarded-for, take the LAST
+  // entry (appended by the trusted proxy) — the first entry is client-controlled
+  // and can be spoofed to bypass IP-based rate limiting.
+  const cf = req.headers.get("cf-connecting-ip");
+  if (cf) return cf.trim();
+  const real = req.headers.get("x-real-ip");
+  if (real) return real.trim();
+  const xff = req.headers.get("x-forwarded-for");
+  if (xff) {
+    const parts = xff.split(",").map((p) => p.trim()).filter(Boolean);
+    if (parts.length > 0) return parts[parts.length - 1];
+  }
+  return "unknown";
 }
 
 // ============ MAIN HANDLER ============
@@ -587,9 +595,10 @@ Deno.serve(async (req) => {
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (err) {
+    // Full error logged server-side only (visible in edge function logs).
     console.error("farma-search error:", err);
     return new Response(
-      JSON.stringify({ error: "Errore interno del server", details: String(err) }),
+      JSON.stringify({ error: "Errore interno del server" }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
