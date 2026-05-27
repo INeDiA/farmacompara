@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { Link } from "react-router-dom";
 import { ExternalLink, Award, Truck, SlidersHorizontal, X } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
@@ -22,6 +23,8 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import type { ProductWithPharmacy } from "@/hooks/useFarmaSearch";
+import { productSlug } from "@/lib/productSlug";
+import { toSlug } from "@/lib/principiAttivi";
 
 interface ResultsTableProps {
   products: ProductWithPharmacy[];
@@ -265,7 +268,12 @@ export function ResultsTable({ products, fromCache }: ResultsTableProps) {
                     </div>
                   )}
                   <CardContent className="p-4 space-y-2">
-                    <p className="font-semibold text-sm pr-24 leading-tight">{p.name}</p>
+                    <Link
+                      to={`/prodotto/${toSlug(p.active_ingredient)}/${productSlug(p.name, p.pharmacies.name)}`}
+                      className="block font-semibold text-sm pr-24 leading-tight hover:text-primary hover:underline"
+                    >
+                      {p.name}
+                    </Link>
                     <div className="flex items-center gap-2 text-xs text-muted-foreground">
                       <span className="font-medium text-foreground">{p.pharmacies.name}</span>
                     </div>
