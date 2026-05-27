@@ -394,17 +394,20 @@ export function ResultsTable({ products, fromCache }: ResultsTableProps) {
                         </div>
                       </TableCell>
                       <TableCell>
-                        {p.product_url && (
-                          <a
-                            href={addUtmParams(p.product_url, p.active_ingredient)}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            aria-label={`Vai al sito della farmacia ${p.pharmacies.name} per ${p.name}`}
-                            className="text-primary hover:text-primary/80"
-                          >
-                            <ExternalLink className="h-4 w-4" />
-                          </a>
-                        )}
+                        {(() => {
+                          const safeHref = p.product_url ? safeOutboundUrl(p.product_url, p.active_ingredient) : null;
+                          return safeHref ? (
+                            <a
+                              href={safeHref}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              aria-label={`Vai al sito della farmacia ${p.pharmacies.name} per ${p.name}`}
+                              className="text-primary hover:text-primary/80"
+                            >
+                              <ExternalLink className="h-4 w-4" />
+                            </a>
+                          ) : null;
+                        })()}
                       </TableCell>
                     </TableRow>
                   );
