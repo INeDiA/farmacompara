@@ -56,6 +56,15 @@ function formatShipping(pharmacy: ProductWithPharmacy["pharmacies"]): string {
   return formatPrice(pharmacy.shipping_cost);
 }
 
+function isSafeUrl(url: string): boolean {
+  try {
+    const { protocol } = new URL(url);
+    return protocol === "https:" || protocol === "http:";
+  } catch {
+    return false;
+  }
+}
+
 function stripSearchParam(url: string): string {
   try {
     const u = new URL(url);
@@ -66,7 +75,8 @@ function stripSearchParam(url: string): string {
   }
 }
 
-function addUtmParams(url: string, activeIngredient: string): string {
+function safeOutboundUrl(url: string, activeIngredient: string): string | null {
+  if (!isSafeUrl(url)) return null;
   const cleaned = stripSearchParam(url);
   const separator = cleaned.includes("?") ? "&" : "?";
   return `${cleaned}${separator}utm_source=farmacompara&utm_medium=referral&utm_campaign=confronto_prezzi&utm_content=${encodeURIComponent(activeIngredient)}`;
@@ -290,16 +300,19 @@ export function ResultsTable({ products, fromCache }: ResultsTableProps) {
                           )}
                         </p>
                       </div>
-                      {p.product_url && (
-                        <a
-                          href={addUtmParams(p.product_url, p.active_ingredient)}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-primary hover:underline flex items-center gap-1"
-                        >
-                          Vai <ExternalLink className="h-3 w-3" />
-                        </a>
-                      )}
+                      {(() => {
+                        const safeHref = p.product_url ? safeOutboundUrl(p.product_url, p.active_ingredient) : null;
+                        return safeHref ? (
+                          <a
+                            href={safeHref}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-primary hover:underline flex items-center gap-1"
+                          >
+                            Vai <ExternalLink className="h-3 w-3" />
+                          </a>
+                        ) : null;
+                      })()}
                     </div>
                     <p className="flex items-center gap-1 text-[11px] text-muted-foreground">
                       <Truck className="h-3 w-3" />
@@ -381,17 +394,20 @@ export function ResultsTable({ products, fromCache }: ResultsTableProps) {
                         </div>
                       </TableCell>
                       <TableCell>
-                        {p.product_url && (
-                          <a
-                            href={addUtmParams(p.product_url, p.active_ingredient)}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            aria-label={`Vai al sito della farmacia ${p.pharmacies.name} per ${p.name}`}
-                            className="text-primary hover:text-primary/80"
-                          >
-                            <ExternalLink className="h-4 w-4" />
-                          </a>
-                        )}
+                        {(() => {
+                          const safeHref = p.product_url ? safeOutboundUrl(p.product_url, p.active_ingredient) : null;
+                          return safeHref ? (
+                            <a
+                              href={safeHref}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              aria-label={`Vai al sito della farmacia ${p.pharmacies.name} per ${p.name}`}
+                              className="text-primary hover:text-primary/80"
+                            >
+                              <ExternalLink className="h-4 w-4" />
+                            </a>
+                          ) : null;
+                        })()}
                       </TableCell>
                     </TableRow>
                   );
