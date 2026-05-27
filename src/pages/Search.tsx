@@ -1,6 +1,6 @@
-import { useEffect, useState } from "react";
-import { useParams, useNavigate, Link } from "react-router-dom";
-import { Pill, Info, X } from "lucide-react";
+import { useEffect } from "react";
+import { useParams, useNavigate, useSearchParams, Link } from "react-router-dom";
+import { Pill, Info } from "lucide-react";
 import { SearchBar } from "@/components/SearchBar";
 import { ResultsTable } from "@/components/ResultsTable";
 import { LoadingSkeleton } from "@/components/LoadingSkeleton";
@@ -10,12 +10,12 @@ import { brandToActive, activeToBrands } from "@/lib/brandToActive";
 
 const Search = () => {
   const { query: rawQuery } = useParams<{ query: string }>();
-  const [searchParams] = [new URLSearchParams(typeof window !== "undefined" ? window.location.search : "")];
+  const [searchParams] = useSearchParams();
   const literal = searchParams.get("literal") === "1";
   const fromBrand = searchParams.get("brand") || null;
   const navigate = useNavigate();
   const query = rawQuery ? fromSlug(rawQuery) : "";
-  const { results, loading, error, search, reset } = useFarmaSearch();
+  const { results, loading, error, search } = useFarmaSearch();
 
   // Redirect brand → principio attivo (a meno che ?literal=1)
   useEffect(() => {
@@ -86,28 +86,42 @@ const Search = () => {
   useEffect(() => {
     if (!results || !results.products.length || !query) return;
     const capitalized = query.charAt(0).toUpperCase() + query.slice(1);
-    const prices = results.products.map(p => p.price);
+    const validUntilDate = new Date();
+    validUntilDate.setDate(validUntilDate.getDate() + 30);
+    const priceValidUntil = validUntilDate.toISOString().slice(0, 10);
     const jsonLd = {
       "@context": "https://schema.org",
       "@type": "ItemList",
       "name": `${capitalized} — confronto prezzi`,
       "url": `https://farmacompara.it/cerca/${rawQuery}`,
       "numberOfItems": results.products.length,
-      "itemListElement": results.products.slice(0, 10).map((p, i) => ({
-        "@type": "ListItem",
-        "position": i + 1,
-        "item": {
-          "@type": "Product",
-          "name": p.name,
-          "url": p.product_url || undefined,
-          "offers": {
-            "@type": "Offer",
-            "price": p.price,
-            "priceCurrency": "EUR",
-            "availability": "https://schema.org/InStock",
+      "itemListElement": results.products.slice(0, 10).map((p, i) => {
+        const slug = `${p.name.normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-+|-+$/g,"").slice(0,80)}--${p.pharmacies.name.normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-+|-+$/g,"")}`;
+        const productPage = `https://farmacompara.it/prodotto/${rawQuery}/${slug}`;
+        return {
+          "@type": "ListItem",
+          "position": i + 1,
+          "item": {
+            "@type": "Product",
+            "name": p.name,
+            "sku": p.id,
+            "url": productPage,
+            "category": capitalized,
+            "offers": {
+              "@type": "Offer",
+              "price": p.price.toFixed(2),
+              "priceCurrency": "EUR",
+              "availability": "https://schema.org/InStock",
+              "priceValidUntil": priceValidUntil,
+              "url": productPage,
+              "seller": {
+                "@type": "Organization",
+                "name": p.pharmacies.name,
+              },
+            },
           },
-        },
-      })),
+        };
+      }),
     };
     const script = document.createElement("script");
     script.type = "application/ld+json";

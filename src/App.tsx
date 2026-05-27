@@ -7,6 +7,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import Index from "./pages/Index.tsx";
 
 const Search = lazy(() => import("./pages/Search.tsx"));
+const Product = lazy(() => import("./pages/Product.tsx"));
 const PrincipiAttivi = lazy(() => import("./pages/PrincipiAttivi.tsx"));
 const NotFound = lazy(() => import("./pages/NotFound.tsx"));
 
@@ -22,6 +23,7 @@ const App = () => (
           <Routes>
             <Route path="/" element={<Index />} />
             <Route path="/cerca/:query" element={<Search />} />
+            <Route path="/prodotto/:active/:slug" element={<Product />} />
             <Route path="/principi-attivi" element={<PrincipiAttivi />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
