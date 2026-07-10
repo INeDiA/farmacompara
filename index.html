@@ -2,6 +2,22 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
+    <!--
+      GitHub Pages serves static files only — there's no server-side rewrite to send
+      deep links like /cerca/paracetamolo to index.html. public/404.html catches those,
+      encodes the path into a query string, and redirects here; this restores the real
+      URL via history.replaceState before react-router mounts, so the app never sees
+      the redirect happen. Standard workaround for SPAs on GitHub Pages.
+    -->
+    <script>
+      (function () {
+        var redirect = sessionStorage.redirect;
+        delete sessionStorage.redirect;
+        if (redirect && redirect !== location.href) {
+          history.replaceState(null, "", redirect);
+        }
+      })();
+    </script>
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <link rel="manifest" href="/manifest.json" />
     <meta name="theme-color" content="#16a34a" />

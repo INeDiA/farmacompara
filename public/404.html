@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="it">
+  <head>
+    <meta charset="utf-8" />
+    <title>FarmaCompara</title>
+    <!--
+      GitHub Pages serves this file for any path with no matching static asset —
+      i.e. every react-router deep link (/cerca/paracetamolo, /prodotto/...).
+      Stash the full URL the visitor actually requested, then redirect to the
+      root; index.html's inline script restores it via history.replaceState
+      before the app mounts, so react-router still sees the real path.
+    -->
+    <script>
+      sessionStorage.redirect = location.href;
+    </script>
+    <meta http-equiv="refresh" content="0;URL='/'" />
+  </head>
+  <body></body>
+</html>

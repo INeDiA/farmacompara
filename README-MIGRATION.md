@@ -1,4 +1,4 @@
-# Migrazione da Lovable a Vercel + Supabase indipendente
+# Migrazione da Lovable a GitHub Pages + Supabase indipendente
 
 Checklist operativa per uscire da Lovable Hosting / Lovable Cloud. Riferimento pieno: piano in
 `~/.claude/plans/analizza-il-sito-farmacompara-it-hashed-umbrella.md`. Qui solo i comandi e le
@@ -16,6 +16,10 @@ su GitHub, in attesa di conferma:
 - `.env` locale aggiornato con URL/anon key del nuovo progetto.
 - `eFarma` e `Farmacia Uno` rimosse da `scrapers[]` in `farma-search/index.ts` e dal DB —
   scelta deliberata, vedi "Scoperte" sotto. **8 farmacie attive**, tutte con integrazioni stabili.
+- Hosting deciso: **GitHub Pages** invece di Vercel. Aggiunto `public/404.html` +
+  script inline in `index.html` (redirect trick per le route client-side di react-router),
+  `public/CNAME` con `farmacompara.it`, workflow `.github/workflows/deploy-pages.yml`
+  (build + deploy automatico ad ogni push su `main`).
 
 ## Scoperte utili durante la preparazione
 
@@ -62,6 +66,12 @@ su GitHub, in attesa di conferma:
   diverso man mano che lo scraper veniva raffinato) — niente UNIQUE su `name`, quindi
   `pharmacyIdMap` nell'edge function (senza `ORDER BY`) finisce per usare l'ultima riga inserita
   per ciascun nome. `seed.sql` contiene solo quella riga "attiva" per ognuna delle 10 farmacie.
+- **GitHub Pages è hosting statico puro, senza rewrite lato server**: aprire un URL profondo
+  (`/cerca/paracetamolo`) direttamente darebbe 404 senza il redirect trick di `404.html`. Ha anche
+  una conseguenza sulla sequenza di verifica: con `public/CNAME` presente, il dominio custom viene
+  associato al repo fin dal primo deploy, quindi non c'è un URL di anteprima isolato come su
+  Vercel — la verifica reale va fatta sul dominio `farmacompara.it` **dopo** aver spostato il DNS
+  (passi 8 e 9 invertiti rispetto a un hosting con preview deployments).
 
 ## 0. Dump da Lovable — fatto ✓
 
@@ -125,29 +135,47 @@ npx supabase secrets set FARMACIE_1000_ALGOLIA_KEY=<recuperata dal traffico di r
 
 `.env` locale aggiornato con `VITE_SUPABASE_PROJECT_ID`, `VITE_SUPABASE_URL`,
 `VITE_SUPABASE_PUBLISHABLE_KEY` del nuovo progetto (chiave in formato nuovo `sb_publishable_...`).
-Le stesse tre vanno replicate nelle env var del progetto Vercel al passo 7.
+Le stesse tre vanno replicate come **secret di GitHub Actions** al passo 7 (Settings → Secrets and
+variables → Actions sul repo, non env var Vercel).
 
-## 7. Deploy su Vercel
+## 7. Deploy su GitHub Pages — file pronti, manca abilitare Pages + push
 
-Dashboard → New Project → importa `INeDiA/farmacompara` da GitHub. Framework preset: Vite.
-Build command: `npm run build`. Output directory: `dist`. Aggiungi le tre env var del passo 6
-nelle impostazioni del progetto Vercel (Production + Preview).
+Preparato in questo repo:
+- `public/404.html` + script inline in `index.html`: redirect trick per le route client-side.
+- `public/CNAME` con `farmacompara.it`.
+- `.github/workflows/deploy-pages.yml`: build (`npm ci && npm run build`) e deploy automatico
+  ad ogni push su `main`, via le action ufficiali `actions/upload-pages-artifact` +
+  `actions/deploy-pages`.
+
+Passi manuali che restano (serve il tuo repo GitHub, non posso farli da qui):
+1. Settings → Secrets and variables → Actions → aggiungi `VITE_SUPABASE_PROJECT_ID`,
+   `VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY` (valori dal passo 6).
+2. Settings → Pages → Source: **GitHub Actions** (non "Deploy from a branch").
+3. Push su `main` (o Actions → "Deploy to GitHub Pages" → Run workflow manualmente).
 
 ## 8. Dominio
 
-Nel progetto Vercel: Settings → Domains → aggiungi `farmacompara.it`, segui le istruzioni per
-aggiornare i record DNS presso il tuo registrar (attualmente puntano a Lovable).
+Il file `public/CNAME` già associa `farmacompara.it` al repo al primo deploy. Aggiorna i record
+DNS presso il tuo registrar (attualmente puntano a Lovable) verso GitHub Pages: un record `A` per
+l'apex verso gli IP di GitHub Pages, o un `CNAME` se usi un sottodominio — istruzioni precise in
+Settings → Pages una volta che la sezione "Custom domain" è attiva.
 
-## 9. Verifica prima del cutover
+## 9. Verifica dopo il cutover DNS
 
-Già verificato a livello di edge function (chiamata diretta, `pharmacies_scraped: 8`, risultati
-regolari). Da ripetere sull'URL di preview Vercel una volta deployato il frontend:
+A differenza di Vercel, GitHub Pages con un `CNAME` presente non offre un URL di anteprima isolato
+prima di spostare il DNS — la verifica va fatta direttamente su `farmacompara.it` una volta che il
+DNS ha propagato (i vecchi resolver continueranno a servire Lovable per un po', è normale):
 - Cerca "paracetamolo": prima ricerca più lenta (scraping live), seconda istantanea (cache hit).
+- Un URL profondo diretto, es. `farmacompara.it/cerca/ibuprofene` da una tab nuova (non navigato
+  dal sito) — deve funzionare grazie al redirect trick, non dare 404.
 - Verifica risultati da farmacie non-Shopify (Guacci, Del Corso, Igea, Gaudiana).
 - Raffica di richieste dallo stesso IP → deve arrivare un 429 con header `Retry-After`.
 - `/principi-attivi`, una pagina `/prodotto/:active/:slug`, link "Vai" con UTM.
 - `GET /functions/v1/farma-search?clear_cache=all` con `Authorization: Bearer <ADMIN_TOKEN>`.
 
+Il backend è già verificato a livello di edge function (chiamata diretta, `pharmacies_scraped: 8`,
+risultati regolari) — questo passo copre solo il frontend + l'integrazione end-to-end.
+
 ## 10. Cutover
 
-Solo dopo la verifica: sposta il DNS di produzione su Vercel, poi disattiva Lovable.
+Solo dopo la verifica: disattiva Lovable (hosting e progetto Supabase gestito da loro).
