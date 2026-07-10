@@ -4,25 +4,44 @@
 -- inside supabase/functions/farma-search/index.ts, or that pharmacy's results are
 -- silently dropped (pharmacyIdMap lookup miss).
 --
--- shipping_cost / free_shipping_threshold verified against each pharmacy's own site
--- on 2026-07-09. Rows marked TODO need a manual check before going live — a wrong
--- value here silently corrupts the "Totale (con spedizione)" column, it won't error.
+-- shipping_cost / free_shipping_threshold below are the REAL production values,
+-- extracted on 2026-07-10 from a pg_dump handed over by Lovable
+-- (~/Downloads/farmacompara_260709.backup) before decommissioning that project.
+-- Where a pharmacy had been re-seeded more than once over time (search_url_template
+-- changed as the scraper was refined), the row actually in effect is the most
+-- recent one by created_at — pharmacyIdMap in the edge function has no ORDER BY,
+-- so for a small, append-mostly table Postgres returns rows in roughly insertion
+-- order and the last `pharmacyIdMap[name] = id` assignment wins. Values below are
+-- that "latest" row per name.
+--
+-- Two rows from the dump were intentionally dropped here from the start: "Farmacia
+-- Loreto" and "Dr. Max" exist in the old DB but have no corresponding entry in
+-- `scrapers[]` — dead sources from an earlier iteration, harmless but pointless.
+--
+-- eFarma and Farmacia Uno were deliberately dropped on 2026-07-10 (not just from
+-- this seed — removed from `scrapers[]` in farma-search/index.ts too, and deployed):
+--   - eFarma's Algolia integration only exposes "secured" API keys with a ~24-27h
+--     built-in expiry (validUntil encoded in the key itself) — there is no
+--     permanent key obtainable from the public site. Keeping it would have meant
+--     manually refreshing a secret every day or two, which wasn't wanted.
+--   - Farmacia Uno's key (Seken.ai, a paid SaaS) was never obtained and has no
+--     public/self-service equivalent — would require reaching out to Seken.ai
+--     directly for an account.
+-- 8 pharmacies remain, all with stable, non-expiring integrations.
 --
 -- NOTE: public.pharmacies has no UNIQUE constraint on `name`, so this insert is
 -- NOT idempotent — run it exactly once, right after the migrations, on a fresh DB.
 -- Re-running would create duplicate rows and make pharmacyIdMap lookups ambiguous.
 
 insert into public.pharmacies (name, base_url, search_url_template, shipping_cost, free_shipping_threshold) values
-  ('Amicafarmacia', 'https://www.amicafarmacia.com', 'https://www.amicafarmacia.com/search/suggest.json?q={query}&resources[type]=product', 5.90, 69.00),
-  ('Farmae', 'https://www.farmae.it', 'https://www.farmae.it/search/suggest.json?q={query}&resources[type]=product', 4.99, 24.90),
+  ('Amicafarmacia', 'https://www.amicafarmacia.com', 'https://www.amicafarmacia.com/search/suggest.json?q={query}&resources[type]=product&resources[limit]=20', 5.90, 69.00),
+  ('Farmae', 'https://www.farmae.it', 'https://www.farmae.it/catalogsearch/result/?q={query}', 4.99, 24.90),
+  ('Farmacia Igea', 'https://www.farmaciaigea.com', 'https://www.farmaciaigea.com/ricerca?controller=search&s={query}', 4.90, 29.00),
+  ('Farmacia Gaudiana', 'https://farmaciagaudiana.it', 'https://farmaciagaudiana.it/index.php?route=product/search&search={query}', 5.90, 39.90),
   ('Farmacia Guacci', 'https://farmaciaguacci.it', 'https://farmaciaguacci.it/index.php?route=product/search&search={query}', 5.90, 39.90),
   ('Farmacia del Corso', 'https://farmaciadelcorso.net', 'https://farmaciadelcorso.net/index.php?route=product/search&search={query}', 5.90, 39.90),
-  ('Farmacia Igea', 'https://www.farmaciaigea.com', 'https://www.farmaciaigea.com/index.php?route=product/search&search={query}', 4.90, 29.00),
-  ('eFarma', 'https://efarma.com', 'https://70OAFALOKQ-dsn.algolia.net/1/indexes/pro_efarma_it_products/query', 5.00, 29.90),
-  -- TODO: verify before launch — costo/soglia non confermati da fonte ufficiale al momento della stesura.
-  ('1000Farmacie', 'https://www.1000farmacie.it', 'https://hw3t8wvs73-dsn.algolia.net/1/indexes/Product/query', 0, null),
-  ('Farmacia Gaudiana', 'https://farmaciagaudiana.it', 'https://farmaciagaudiana.it/index.php?route=product/search&search={query}', 0, null),
-  ('Farmacia Uno', 'https://farmaciauno.it', 'https://open.seken.ai/api/search', 0, null),
+  ('1000Farmacie', 'https://1000farmacie.it', 'https://1000farmacie.it/search?q={query}', 5.90, 39.90),
   -- NB: farmaeurope.eu ora reindirizza a farmae.it (i due brand si sono fusi) — vedi
-  -- README-MIGRATION.md per la valutazione se vale ancora la pena tenere questo scraper.
-  ('Farmaeurope', 'https://www.farmaeurope.eu', 'https://www.farmaeurope.eu/searchautocomplete/ajax/suggest/?q={query}', 0, null);
+  -- README-MIGRATION.md per la valutazione se vale ancora la pena tenere questo scraper,
+  -- indipendentemente dal fatto che il costo di spedizione qui sotto sia corretto.
+  ('Farmaeurope', 'https://www.farmaeurope.eu', 'https://www.farmaeurope.eu/catalogsearch/result/?q={query}', 4.99, 39.90);

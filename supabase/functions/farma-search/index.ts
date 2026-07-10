@@ -10,9 +10,7 @@ const UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36";
 
 // API keys lette esclusivamente dai secret dell'edge function.
 // Se mancanti, lo scraper della relativa fonte viene saltato.
-const EFARMA_ALGOLIA_KEY = Deno.env.get("EFARMA_ALGOLIA_KEY") ?? "";
 const FARMACIE_1000_ALGOLIA_KEY = Deno.env.get("FARMACIE_1000_ALGOLIA_KEY") ?? "";
-const SEKEN_API_KEY = Deno.env.get("SEKEN_API_KEY") ?? "";
 
 interface ProductResult {
   name: string;
@@ -170,32 +168,6 @@ async function scrapeFarmae(query: string): Promise<ProductResult[]> {
   } catch (err) { console.error("Farmae error:", err); return []; }
 }
 
-// ============ EFARMA (Algolia) ============
-async function scrapeEfarma(query: string): Promise<ProductResult[]> {
-  try {
-    const res = await fetch(
-      "https://70OAFALOKQ-dsn.algolia.net/1/indexes/pro_efarma_it_products/query",
-      {
-        method: "POST",
-        headers: {
-          "x-algolia-application-id": "70OAFALOKQ",
-          "x-algolia-api-key": EFARMA_ALGOLIA_KEY,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ query, hitsPerPage: 20, attributesToRetrieve: ["name", "price", "url", "image_url", "thumbnail_url"] }),
-      }
-    );
-    if (!res.ok) return [];
-    const data = await res.json();
-    return filterByQuery(
-      (data?.hits || []).map((h: any) => buildProduct(
-        h.name || "", h.price?.EUR?.default || h.price?.EUR?.default_original || 0,
-        h.url || null, h.image_url || h.thumbnail_url || null,
-      )), query,
-    );
-  } catch (err) { console.error("eFarma error:", err); return []; }
-}
-
 // ============ AMICAFARMACIA (Shopify) ============
 async function scrapeAmicafarmacia(query: string): Promise<ProductResult[]> {
   try {
@@ -301,32 +273,6 @@ async function scrapeFarmaeurope(query: string): Promise<ProductResult[]> {
   } catch (err) { console.error("Farmaeurope error:", err); return []; }
 }
 
-// ============ FARMACIA UNO (Seken.ai) ============
-async function scrapeFarmaciaUno(query: string): Promise<ProductResult[]> {
-  try {
-    const res = await fetch("https://open.seken.ai/api/search", {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${SEKEN_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ query, limit: 20 }),
-    });
-    if (!res.ok) return [];
-    const data = await res.json();
-    const items = data?.results || data?.products || data?.hits || [];
-    return filterByQuery(
-      items.map((item: any) => {
-        const name = item.name || item.title || "";
-        const price = typeof item.price === "number" ? item.price : parseFloat(item.price) || 0;
-        const productUrl = item.url ? (item.url.startsWith("http") ? item.url : `https://farmaciauno.it${item.url}`) : null;
-        const image = item.image_url || item.image || item.thumbnail || null;
-        return buildProduct(name, price, productUrl, image);
-      }), query,
-    );
-  } catch (err) { console.error("Farmacia Uno error:", err); return []; }
-}
-
 // ============ PHARMACY REGISTRY ============
 interface PharmacyScraper {
   pharmacyName: string;
@@ -335,7 +281,6 @@ interface PharmacyScraper {
 
 const scrapers: PharmacyScraper[] = [
   { pharmacyName: "Farmae", scrape: scrapeFarmae },
-  { pharmacyName: "eFarma", scrape: scrapeEfarma },
   { pharmacyName: "Amicafarmacia", scrape: scrapeAmicafarmacia },
   { pharmacyName: "Farmacia Igea", scrape: (q) => scrapeOpenCart("https://www.farmaciaigea.com", q) },
   { pharmacyName: "Farmacia Gaudiana", scrape: (q) => scrapeOpenCart("https://farmaciagaudiana.it", q) },
@@ -343,7 +288,6 @@ const scrapers: PharmacyScraper[] = [
   { pharmacyName: "Farmacia del Corso", scrape: (q) => scrapeOpenCart("https://farmaciadelcorso.net", q) },
   { pharmacyName: "1000Farmacie", scrape: scrape1000Farmacie },
   { pharmacyName: "Farmaeurope", scrape: scrapeFarmaeurope },
-  { pharmacyName: "Farmacia Uno", scrape: scrapeFarmaciaUno },
 ];
 
 // ============ RATE LIMITING ============
