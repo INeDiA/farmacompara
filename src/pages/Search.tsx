@@ -13,6 +13,7 @@ const Search = () => {
   const [searchParams] = useSearchParams();
   const literal = searchParams.get("literal") === "1";
   const fromBrand = searchParams.get("brand") || null;
+  const page = searchParams.get("page") || "1";
   const navigate = useNavigate();
   const query = rawQuery ? fromSlug(rawQuery) : "";
   const { results, loading, error, search } = useFarmaSearch();
@@ -49,7 +50,9 @@ const Search = () => {
       const pageTitle = `${capitalized} — prezzo al grammo | FarmaCompara`;
       // Keep description under 160 chars even for long molecules
       const pageDesc = `Confronta il prezzo al grammo di ${capitalized} tra farmacie online italiane. Trova la confezione più conveniente.`;
-      const pageUrl = `https://farmacompara.it/cerca/${rawQuery}`;
+      const pageUrl = page !== "1"
+        ? `https://farmacompara.it/cerca/${rawQuery}?page=${page}`
+        : `https://farmacompara.it/cerca/${rawQuery}`;
 
       document.title = pageTitle;
       setMeta("name", "description", pageDesc);
@@ -80,7 +83,7 @@ const Search = () => {
       setMeta("name", "twitter:title", homeTitle);
       setMeta("name", "twitter:description", homeDesc);
     };
-  }, [query, rawQuery]);
+  }, [query, rawQuery, page]);
 
   // JSON-LD structured data
   useEffect(() => {

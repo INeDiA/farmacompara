@@ -1,9 +1,9 @@
-import { useMemo, useState } from "react";
-import { Link } from "react-router-dom";
-import { ExternalLink, Award, Truck, SlidersHorizontal, X } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Link, useSearchParams } from "react-router-dom";
+import { ExternalLink, Award, Truck, SlidersHorizontal, X, ChevronLeft, ChevronRight } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -22,6 +22,9 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { Pagination, PaginationContent, PaginationItem } from "@/components/ui/pagination";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { cn } from "@/lib/utils";
 import type { ProductWithPharmacy } from "@/hooks/useFarmaSearch";
 import { productSlug } from "@/lib/productSlug";
 import { toSlug } from "@/lib/principiAttivi";
@@ -30,6 +33,8 @@ interface ResultsTableProps {
   products: ProductWithPharmacy[];
   fromCache: boolean;
 }
+
+const PAGE_SIZE = 20;
 
 // ---------- Helpers ----------
 
@@ -113,6 +118,8 @@ export function ResultsTable({ products, fromCache }: ResultsTableProps) {
   const [maxPrice, setMaxPrice] = useState<string>("");
   const [freeShippingOnly, setFreeShippingOnly] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const isMobile = useIsMobile();
 
   // Forme disponibili nei risultati correnti
   const availableForms = useMemo(() => {
@@ -134,6 +141,38 @@ export function ResultsTable({ products, fromCache }: ResultsTableProps) {
       return true;
     });
   }, [products, formFilter, maxPrice, freeShippingOnly]);
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const rawPage = parseInt(searchParams.get("page") || "1", 10);
+  const page = Number.isFinite(rawPage) ? Math.min(Math.max(rawPage, 1), totalPages) : 1;
+
+  const pageItems = useMemo(
+    () => filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE),
+    [filtered, page],
+  );
+
+  // Torna a pagina 1 quando cambiano i filtri (non al primo montaggio: altrimenti
+  // un link diretto a ?page=2 verrebbe azzerato subito dopo il caricamento).
+  const skipNextReset = useRef(true);
+  useEffect(() => {
+    if (skipNextReset.current) {
+      skipNextReset.current = false;
+      return;
+    }
+    if (searchParams.get("page")) {
+      const next = new URLSearchParams(searchParams);
+      next.delete("page");
+      setSearchParams(next, { replace: true });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [formFilter, maxPrice, freeShippingOnly]);
+
+  const buildPageSearch = (targetPage: number): string => {
+    const next = new URLSearchParams(searchParams);
+    if (targetPage <= 1) next.delete("page");
+    else next.set("page", String(targetPage));
+    return next.toString();
+  };
 
   const activeFilterCount =
     (formFilter !== "all" ? 1 : 0) +
@@ -161,12 +200,17 @@ export function ResultsTable({ products, fromCache }: ResultsTableProps) {
     );
   }
 
+  const rangeStart = filtered.length === 0 ? 0 : (page - 1) * PAGE_SIZE + 1;
+  const rangeEnd = Math.min(page * PAGE_SIZE, filtered.length);
+  const countLabel =
+    totalPages > 1
+      ? `${rangeStart}–${rangeEnd} di ${filtered.length} prodott${filtered.length === 1 ? "o" : "i"}`
+      : `${filtered.length} di ${products.length} prodott${products.length === 1 ? "o" : "i"}`;
+
   return (
     <div className="mt-8 space-y-4">
       <div className="flex items-center justify-between flex-wrap gap-2">
-        <h2 className="text-xl font-semibold">
-          {filtered.length} di {products.length} prodott{products.length === 1 ? "o" : "i"}
-        </h2>
+        <h2 className="text-xl font-semibold">{countLabel}</h2>
         <div className="flex items-center gap-2">
           {fromCache && isPreview && (
             <Badge variant="secondary" className="text-xs">
@@ -250,64 +294,162 @@ export function ResultsTable({ products, fromCache }: ResultsTableProps) {
             Nessun prodotto rispetta i filtri selezionati.
           </CardContent>
         </Card>
+      ) : isMobile ? (
+        <div className="space-y-3">
+          {pageItems.map((p, i) => {
+            const globalIndex = (page - 1) * PAGE_SIZE + i;
+            const total = effectivePrice(p);
+            const ship = shippingCostFor(p);
+            return (
+              <Card
+                key={p.id}
+                className={`relative overflow-hidden ${globalIndex === 0 ? "border-primary border-2 shadow-md" : ""}`}
+              >
+                {globalIndex === 0 && (
+                  <div className="absolute top-0 right-0 bg-primary text-primary-foreground px-3 py-1 rounded-bl-lg text-xs font-semibold flex items-center gap-1">
+                    <Award className="h-3 w-3" /> Più conveniente
+                  </div>
+                )}
+                <CardContent className="p-4 space-y-2">
+                  <Link
+                    to={`/prodotto/${toSlug(p.active_ingredient)}/${productSlug(p.name, p.pharmacies.name)}`}
+                    className="block font-semibold text-sm pr-24 leading-tight hover:text-primary hover:underline"
+                  >
+                    {p.name}
+                  </Link>
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                    <span className="font-medium text-foreground">{p.pharmacies.name}</span>
+                  </div>
+                  <div className="grid grid-cols-3 gap-2 text-sm">
+                    <div>
+                      <p className="text-muted-foreground text-xs">Prezzo</p>
+                      <p className="font-semibold">{formatPrice(p.price)}</p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground text-xs">Dosaggio</p>
+                      <p className="font-medium">
+                        {p.dosage_mg ? `${p.dosage_mg}mg` : "N/D"}
+                        {p.quantity ? ` × ${p.quantity}` : ""}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground text-xs">€/g</p>
+                      <p className={`font-bold ${globalIndex === 0 ? "text-primary" : ""}`}>
+                        {formatPricePerG(p.price_per_mg)}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-between text-xs pt-2 border-t">
+                    <div>
+                      <p className="text-muted-foreground">Totale (con spedizione)</p>
+                      <p className={`font-semibold text-sm ${globalIndex === 0 ? "text-primary" : "text-foreground"}`}>
+                        {formatPrice(total)}
+                        {ship === 0 && (
+                          <span className="ml-1 text-[10px] font-medium text-green-600 dark:text-green-400">
+                            spedizione gratis
+                          </span>
+                        )}
+                      </p>
+                    </div>
+                    {(() => {
+                      const safeHref = p.product_url ? safeOutboundUrl(p.product_url, p.active_ingredient) : null;
+                      return safeHref ? (
+                        <a
+                          href={safeHref}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-primary hover:underline flex items-center gap-1"
+                        >
+                          Vai <ExternalLink className="h-3 w-3" />
+                        </a>
+                      ) : null;
+                    })()}
+                  </div>
+                  <p className="flex items-center gap-1 text-[11px] text-muted-foreground">
+                    <Truck className="h-3 w-3" />
+                    {formatShipping(p.pharmacies)}
+                  </p>
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
       ) : (
-        <>
-          {/* Mobile cards */}
-          <div className="block md:hidden space-y-3">
-            {filtered.map((p, i) => {
-              const total = effectivePrice(p);
-              const ship = shippingCostFor(p);
-              return (
-                <Card
-                  key={p.id}
-                  className={`relative overflow-hidden ${i === 0 ? "border-primary border-2 shadow-md" : ""}`}
-                >
-                  {i === 0 && (
-                    <div className="absolute top-0 right-0 bg-primary text-primary-foreground px-3 py-1 rounded-bl-lg text-xs font-semibold flex items-center gap-1">
-                      <Award className="h-3 w-3" /> Più conveniente
-                    </div>
-                  )}
-                  <CardContent className="p-4 space-y-2">
-                    <Link
-                      to={`/prodotto/${toSlug(p.active_ingredient)}/${productSlug(p.name, p.pharmacies.name)}`}
-                      className="block font-semibold text-sm pr-24 leading-tight hover:text-primary hover:underline"
+        <Card className="overflow-hidden">
+          <Table>
+            <TableHeader>
+              <TableRow className="bg-muted/50">
+                <TableHead className="w-8">#</TableHead>
+                <TableHead>Prodotto</TableHead>
+                <TableHead>Farmacia</TableHead>
+                <TableHead className="text-right">Prezzo</TableHead>
+                <TableHead className="text-right">Dosaggio</TableHead>
+                <TableHead className="text-right">Qtà</TableHead>
+                <TableHead className="text-right font-bold">€/g</TableHead>
+                <TableHead className="text-right">Totale</TableHead>
+                <TableHead>Spedizione</TableHead>
+                <TableHead className="w-8"></TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {pageItems.map((p, i) => {
+                const globalIndex = (page - 1) * PAGE_SIZE + i;
+                const total = effectivePrice(p);
+                const ship = shippingCostFor(p);
+                return (
+                  <TableRow
+                    key={p.id}
+                    className={globalIndex === 0 ? "bg-primary/5 font-medium" : ""}
+                  >
+                    <TableCell>
+                      {globalIndex === 0 ? (
+                        <Award className="h-5 w-5 text-primary" />
+                      ) : (
+                        <span className="text-muted-foreground">{globalIndex + 1}</span>
+                      )}
+                    </TableCell>
+                    <TableCell className="max-w-[250px]">
+                      <Link
+                        to={`/prodotto/${toSlug(p.active_ingredient)}/${productSlug(p.name, p.pharmacies.name)}`}
+                        className="line-clamp-2 text-sm hover:text-primary hover:underline"
+                      >
+                        {p.name}
+                      </Link>
+                    </TableCell>
+                    <TableCell>
+                      <span className="text-sm font-medium">{p.pharmacies.name}</span>
+                    </TableCell>
+                    <TableCell className="text-right font-semibold">
+                      {formatPrice(p.price)}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      {p.dosage_mg ? `${p.dosage_mg}mg` : "N/D"}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      {p.quantity || "N/D"}
+                    </TableCell>
+                    <TableCell
+                      className={`text-right font-bold ${globalIndex === 0 ? "text-primary" : ""}`}
                     >
-                      {p.name}
-                    </Link>
-                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                      <span className="font-medium text-foreground">{p.pharmacies.name}</span>
-                    </div>
-                    <div className="grid grid-cols-3 gap-2 text-sm">
-                      <div>
-                        <p className="text-muted-foreground text-xs">Prezzo</p>
-                        <p className="font-semibold">{formatPrice(p.price)}</p>
+                      {formatPricePerG(p.price_per_mg)}
+                    </TableCell>
+                    <TableCell className={`text-right ${globalIndex === 0 ? "font-semibold text-primary" : "font-medium"}`}>
+                      <div className="flex flex-col items-end leading-tight">
+                        <span>{formatPrice(total)}</span>
+                        {ship === 0 && (
+                          <span className="text-[10px] font-medium text-green-600 dark:text-green-400">
+                            sped. gratis
+                          </span>
+                        )}
                       </div>
-                      <div>
-                        <p className="text-muted-foreground text-xs">Dosaggio</p>
-                        <p className="font-medium">
-                          {p.dosage_mg ? `${p.dosage_mg}mg` : "N/D"}
-                          {p.quantity ? ` × ${p.quantity}` : ""}
-                        </p>
+                    </TableCell>
+                    <TableCell className="text-xs text-muted-foreground">
+                      <div className="flex items-center gap-1">
+                        <Truck className="h-3 w-3 shrink-0" />
+                        <span>{formatShipping(p.pharmacies)}</span>
                       </div>
-                      <div>
-                        <p className="text-muted-foreground text-xs">€/g</p>
-                        <p className={`font-bold ${i === 0 ? "text-primary" : ""}`}>
-                          {formatPricePerG(p.price_per_mg)}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="flex items-center justify-between text-xs pt-2 border-t">
-                      <div>
-                        <p className="text-muted-foreground">Totale (con spedizione)</p>
-                        <p className={`font-semibold text-sm ${i === 0 ? "text-primary" : "text-foreground"}`}>
-                          {formatPrice(total)}
-                          {ship === 0 && (
-                            <span className="ml-1 text-[10px] font-medium text-green-600 dark:text-green-400">
-                              spedizione gratis
-                            </span>
-                          )}
-                        </p>
-                      </div>
+                    </TableCell>
+                    <TableCell>
                       {(() => {
                         const safeHref = p.product_url ? safeOutboundUrl(p.product_url, p.active_ingredient) : null;
                         return safeHref ? (
@@ -315,120 +457,60 @@ export function ResultsTable({ products, fromCache }: ResultsTableProps) {
                             href={safeHref}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="text-primary hover:underline flex items-center gap-1"
+                            aria-label={`Vai al sito della farmacia ${p.pharmacies.name} per ${p.name}`}
+                            className="text-primary hover:text-primary/80"
                           >
-                            Vai <ExternalLink className="h-3 w-3" />
+                            <ExternalLink className="h-4 w-4" />
                           </a>
                         ) : null;
                       })()}
-                    </div>
-                    <p className="flex items-center gap-1 text-[11px] text-muted-foreground">
-                      <Truck className="h-3 w-3" />
-                      {formatShipping(p.pharmacies)}
-                    </p>
-                  </CardContent>
-                </Card>
-              );
-            })}
-          </div>
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
+            </TableBody>
+          </Table>
+        </Card>
+      )}
 
-          {/* Desktop table */}
-          <Card className="hidden md:block overflow-hidden">
-            <Table>
-              <TableHeader>
-                <TableRow className="bg-muted/50">
-                  <TableHead className="w-8">#</TableHead>
-                  <TableHead>Prodotto</TableHead>
-                  <TableHead>Farmacia</TableHead>
-                  <TableHead className="text-right">Prezzo</TableHead>
-                  <TableHead className="text-right">Dosaggio</TableHead>
-                  <TableHead className="text-right">Qtà</TableHead>
-                  <TableHead className="text-right font-bold">€/g</TableHead>
-                  <TableHead className="text-right">Totale</TableHead>
-                  <TableHead>Spedizione</TableHead>
-                  <TableHead className="w-8"></TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filtered.map((p, i) => {
-                  const total = effectivePrice(p);
-                  const ship = shippingCostFor(p);
-                  return (
-                    <TableRow
-                      key={p.id}
-                      className={i === 0 ? "bg-primary/5 font-medium" : ""}
-                    >
-                      <TableCell>
-                        {i === 0 ? (
-                          <Award className="h-5 w-5 text-primary" />
-                        ) : (
-                          <span className="text-muted-foreground">{i + 1}</span>
-                        )}
-                      </TableCell>
-                      <TableCell className="max-w-[250px]">
-                        <Link
-                          to={`/prodotto/${toSlug(p.active_ingredient)}/${productSlug(p.name, p.pharmacies.name)}`}
-                          className="line-clamp-2 text-sm hover:text-primary hover:underline"
-                        >
-                          {p.name}
-                        </Link>
-                      </TableCell>
-                      <TableCell>
-                        <span className="text-sm font-medium">{p.pharmacies.name}</span>
-                      </TableCell>
-                      <TableCell className="text-right font-semibold">
-                        {formatPrice(p.price)}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        {p.dosage_mg ? `${p.dosage_mg}mg` : "N/D"}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        {p.quantity || "N/D"}
-                      </TableCell>
-                      <TableCell
-                        className={`text-right font-bold ${i === 0 ? "text-primary" : ""}`}
-                      >
-                        {formatPricePerG(p.price_per_mg)}
-                      </TableCell>
-                      <TableCell className={`text-right ${i === 0 ? "font-semibold text-primary" : "font-medium"}`}>
-                        <div className="flex flex-col items-end leading-tight">
-                          <span>{formatPrice(total)}</span>
-                          {ship === 0 && (
-                            <span className="text-[10px] font-medium text-green-600 dark:text-green-400">
-                              sped. gratis
-                            </span>
-                          )}
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-xs text-muted-foreground">
-                        <div className="flex items-center gap-1">
-                          <Truck className="h-3 w-3 shrink-0" />
-                          <span>{formatShipping(p.pharmacies)}</span>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        {(() => {
-                          const safeHref = p.product_url ? safeOutboundUrl(p.product_url, p.active_ingredient) : null;
-                          return safeHref ? (
-                            <a
-                              href={safeHref}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              aria-label={`Vai al sito della farmacia ${p.pharmacies.name} per ${p.name}`}
-                              className="text-primary hover:text-primary/80"
-                            >
-                              <ExternalLink className="h-4 w-4" />
-                            </a>
-                          ) : null;
-                        })()}
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
-          </Card>
-        </>
+      {filtered.length > 0 && totalPages > 1 && (
+        <Pagination>
+          <PaginationContent>
+            <PaginationItem>
+              {page > 1 ? (
+                <Link
+                  to={{ search: buildPageSearch(page - 1) }}
+                  className={cn(buttonVariants({ variant: "outline" }), "gap-1 pl-2.5")}
+                >
+                  <ChevronLeft className="h-4 w-4" /> Precedente
+                </Link>
+              ) : (
+                <span className={cn(buttonVariants({ variant: "outline" }), "gap-1 pl-2.5 opacity-50 pointer-events-none")}>
+                  <ChevronLeft className="h-4 w-4" /> Precedente
+                </span>
+              )}
+            </PaginationItem>
+            <PaginationItem>
+              <span className="px-4 text-sm text-muted-foreground whitespace-nowrap">
+                Pagina {page} di {totalPages}
+              </span>
+            </PaginationItem>
+            <PaginationItem>
+              {page < totalPages ? (
+                <Link
+                  to={{ search: buildPageSearch(page + 1) }}
+                  className={cn(buttonVariants({ variant: "outline" }), "gap-1 pr-2.5")}
+                >
+                  Successiva <ChevronRight className="h-4 w-4" />
+                </Link>
+              ) : (
+                <span className={cn(buttonVariants({ variant: "outline" }), "gap-1 pr-2.5 opacity-50 pointer-events-none")}>
+                  Successiva <ChevronRight className="h-4 w-4" />
+                </span>
+              )}
+            </PaginationItem>
+          </PaginationContent>
+        </Pagination>
       )}
     </div>
   );
