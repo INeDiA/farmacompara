@@ -426,9 +426,15 @@ Deno.serve(async (req) => {
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Rate limiting
+    // Rate limiting. The nightly static build (scripts/prerender.mjs) runs one
+    // search per principio attivo from a GitHub runner and identifies itself with
+    // PRERENDER_TOKEN, so it is exempt; everyone else is rate limited.
+    const prerenderToken = Deno.env.get("PRERENDER_TOKEN");
+    const isPrerender = !!prerenderToken && req.headers.get("x-prerender-token") === prerenderToken;
     const clientIp = getClientIp(req);
-    const rateCheck = await checkRateLimit(supabase, clientIp);
+    const rateCheck: { blocked: boolean; retryAfter?: number } = isPrerender
+      ? { blocked: false }
+      : await checkRateLimit(supabase, clientIp);
     if (rateCheck.blocked) {
       return new Response(
         JSON.stringify({ error: "Troppe ricerche. Riprova più tardi.", retry_after: rateCheck.retryAfter }),

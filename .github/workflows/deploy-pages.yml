@@ -4,6 +4,10 @@ on:
   push:
     branches: [main]
   workflow_dispatch:
+  # Nightly rebuild so the static /cerca pages carry fresh prices
+  # (scripts/prerender.mjs). Times are UTC; GitHub may start it a bit late.
+  schedule:
+    - cron: "0 4 * * *"
 
 permissions:
   contents: read
@@ -17,6 +21,7 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -29,6 +34,7 @@ jobs:
           VITE_SUPABASE_PROJECT_ID: ${{ secrets.VITE_SUPABASE_PROJECT_ID }}
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
           VITE_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.VITE_SUPABASE_PUBLISHABLE_KEY }}
+          PRERENDER_TOKEN: ${{ secrets.PRERENDER_TOKEN }}
       - uses: actions/upload-pages-artifact@v3
         with:
           path: dist
