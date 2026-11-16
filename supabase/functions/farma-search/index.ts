@@ -273,6 +273,21 @@ async function scrapeFarmaeurope(query: string): Promise<ProductResult[]> {
   } catch (err) { console.error("Farmaeurope error:", err); return []; }
 }
 
+// ============ PER-PHARMACY TIMEOUT ============
+// One slow or hanging pharmacy used to stall the whole search (seen: 130s).
+// After this many ms its results are dropped and the others are returned.
+const SCRAPER_TIMEOUT_MS = 15_000;
+function withTimeout(p: Promise<ProductResult[]>, ms: number, label: string): Promise<ProductResult[]> {
+  let timer: number | undefined;
+  const timeout = new Promise<ProductResult[]>((resolve) => {
+    timer = setTimeout(() => {
+      console.warn(`${label}: timed out after ${ms}ms`);
+      resolve([]);
+    }, ms);
+  });
+  return Promise.race([p, timeout]).finally(() => clearTimeout(timer));
+}
+
 // ============ PHARMACY REGISTRY ============
 interface PharmacyScraper {
   pharmacyName: string;
@@ -487,7 +502,7 @@ Deno.serve(async (req) => {
       scrapers.map(async (s) => {
         const perTerm = await Promise.all(
           searchTerms.map(async (term) => {
-            const products = await s.scrape(term);
+            const products = await withTimeout(s.scrape(term), SCRAPER_TIMEOUT_MS, s.pharmacyName);
             // Re-filtra con il pattern combinato così non perdiamo brand match dentro risultati di altri termini
             return filterByQuery(products, filterPattern);
           }),
