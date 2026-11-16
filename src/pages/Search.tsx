@@ -16,6 +16,8 @@ const Search = () => {
   const page = searchParams.get("page") || "1";
   const navigate = useNavigate();
   const query = rawQuery ? fromSlug(rawQuery) : "";
+  // URL-safe form for canonical/JSON-LD (matches sitemap and prerendered HTML)
+  const querySlug = rawQuery ? encodeURIComponent(rawQuery) : "";
   const { results, loading, error, search } = useFarmaSearch();
 
   // Redirect brand → principio attivo (a meno che ?literal=1)
@@ -51,8 +53,8 @@ const Search = () => {
       // Keep description under 160 chars even for long molecules
       const pageDesc = `Confronta il prezzo al grammo di ${capitalized} tra farmacie online italiane. Trova la confezione più conveniente.`;
       const pageUrl = page !== "1"
-        ? `https://farmacompara.it/cerca/${rawQuery}?page=${page}`
-        : `https://farmacompara.it/cerca/${rawQuery}`;
+        ? `https://farmacompara.it/cerca/${querySlug}?page=${page}`
+        : `https://farmacompara.it/cerca/${querySlug}`;
 
       document.title = pageTitle;
       setMeta("name", "description", pageDesc);
@@ -83,46 +85,29 @@ const Search = () => {
       setMeta("name", "twitter:title", homeTitle);
       setMeta("name", "twitter:description", homeDesc);
     };
-  }, [query, rawQuery, page]);
+  }, [query, querySlug, page]);
 
   // JSON-LD structured data
   useEffect(() => {
     if (!results || !results.products.length || !query) return;
     const capitalized = query.charAt(0).toUpperCase() + query.slice(1);
-    const validUntilDate = new Date();
-    validUntilDate.setDate(validUntilDate.getDate() + 30);
-    const priceValidUntil = validUntilDate.toISOString().slice(0, 10);
+    // Summary-page ItemList: each entry only points to its product page, which
+    // carries the full Product markup. Embedding Product objects here made Google
+    // validate them without images (critical error).
     const jsonLd = {
       "@context": "https://schema.org",
       "@type": "ItemList",
       "name": `${capitalized} — confronto prezzi`,
-      "url": `https://farmacompara.it/cerca/${rawQuery}`,
+      "url": `https://farmacompara.it/cerca/${querySlug}`,
       "numberOfItems": results.products.length,
       "itemListElement": results.products.slice(0, 10).map((p, i) => {
         const slug = `${p.name.normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-+|-+$/g,"").slice(0,80)}--${p.pharmacies.name.normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-+|-+$/g,"")}`;
-        const productPage = `https://farmacompara.it/prodotto/${rawQuery}/${slug}`;
+        const productPage = `https://farmacompara.it/prodotto/${querySlug}/${slug}`;
         return {
           "@type": "ListItem",
           "position": i + 1,
-          "item": {
-            "@type": "Product",
-            "name": p.name,
-            "sku": p.id,
-            "url": productPage,
-            "category": capitalized,
-            "offers": {
-              "@type": "Offer",
-              "price": p.price.toFixed(2),
-              "priceCurrency": "EUR",
-              "availability": "https://schema.org/InStock",
-              "priceValidUntil": priceValidUntil,
-              "url": productPage,
-              "seller": {
-                "@type": "Organization",
-                "name": p.pharmacies.name,
-              },
-            },
-          },
+          "name": p.name,
+          "url": productPage,
         };
       }),
     };
@@ -135,7 +120,7 @@ const Search = () => {
       const el = document.getElementById("farma-jsonld");
       if (el) el.remove();
     };
-  }, [results, query, rawQuery]);
+  }, [results, query, querySlug]);
 
   // Breadcrumb JSON-LD
   useEffect(() => {
@@ -161,7 +146,7 @@ const Search = () => {
           "@type": "ListItem",
           "position": 3,
           "name": capitalized,
-          "item": `https://farmacompara.it/cerca/${rawQuery}`,
+          "item": `https://farmacompara.it/cerca/${querySlug}`,
         },
       ],
     };
@@ -174,7 +159,7 @@ const Search = () => {
       const el = document.getElementById("farma-breadcrumb-jsonld");
       if (el) el.remove();
     };
-  }, [query, rawQuery]);
+  }, [query, querySlug]);
 
   // Auto-search when query changes. Se il query è un principio attivo con brand mappati,
   // li passiamo come alias così la ricerca trova anche prodotti col solo nome commerciale.

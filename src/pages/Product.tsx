@@ -81,6 +81,7 @@ const Product = () => {
   const { active: activeRaw, slug } = useParams<{ active: string; slug: string }>();
   const navigate = useNavigate();
   const active = activeRaw ? fromSlug(activeRaw) : "";
+  const activeSlug = activeRaw ? encodeURIComponent(activeRaw) : "";
   const { results, loading, error, search } = useFarmaSearch();
 
   useEffect(() => {
@@ -102,7 +103,7 @@ const Product = () => {
     if (!product) return;
     const title = `${product.name} — ${product.pharmacies.name} | FarmaCompara`.slice(0, 60);
     const desc = `${product.name} a ${`€${product.price.toFixed(2)}`} su ${product.pharmacies.name}. Confronta il prezzo al grammo di ${capActive} su FarmaCompara.`.slice(0, 160);
-    const url = `https://farmacompara.it/prodotto/${activeRaw}/${slug}`;
+    const url = `https://farmacompara.it/prodotto/${activeSlug}/${slug}`;
 
     document.title = title;
     setMeta("name", "description", desc);
@@ -118,14 +119,18 @@ const Product = () => {
     setMeta("name", "twitter:description", desc);
 
     const ship = shippingCostFor(product);
+    // Google requires "image" for Product rich results: without a real product
+    // photo, skip the Product markup entirely (breadcrumbs are still emitted).
+    const hasImage = !!product.image_url && isSafeUrl(product.image_url);
     const jsonLd: Record<string, unknown> = {
       "@context": "https://schema.org",
       "@type": "Product",
       name: product.name,
+      description: desc,
       sku: product.id,
       url,
       category: capActive,
-      ...(product.image_url && isSafeUrl(product.image_url) ? { image: product.image_url } : {}),
+      image: product.image_url,
       offers: {
         "@type": "Offer",
         price: product.price.toFixed(2),
@@ -148,7 +153,7 @@ const Product = () => {
           : {}),
       },
     };
-    injectJsonLd("product-jsonld", jsonLd);
+    if (hasImage) injectJsonLd("product-jsonld", jsonLd);
 
     injectJsonLd("product-breadcrumb-jsonld", {
       "@context": "https://schema.org",
@@ -159,7 +164,7 @@ const Product = () => {
           "@type": "ListItem",
           position: 2,
           name: capActive,
-          item: `https://farmacompara.it/cerca/${activeRaw}`,
+          item: `https://farmacompara.it/cerca/${activeSlug}`,
         },
         {
           "@type": "ListItem",
@@ -174,7 +179,7 @@ const Product = () => {
       document.getElementById("product-jsonld")?.remove();
       document.getElementById("product-breadcrumb-jsonld")?.remove();
     };
-  }, [product, activeRaw, slug, capActive]);
+  }, [product, activeSlug, slug, capActive]);
 
   // If results loaded but no matching product, go back to search page
   useEffect(() => {
