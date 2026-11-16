@@ -87,40 +87,9 @@ const Search = () => {
     };
   }, [query, querySlug, page]);
 
-  // JSON-LD structured data
-  useEffect(() => {
-    if (!results || !results.products.length || !query) return;
-    const capitalized = query.charAt(0).toUpperCase() + query.slice(1);
-    // Summary-page ItemList: each entry only points to its product page, which
-    // carries the full Product markup. Embedding Product objects here made Google
-    // validate them without images (critical error).
-    const jsonLd = {
-      "@context": "https://schema.org",
-      "@type": "ItemList",
-      "name": `${capitalized} — confronto prezzi`,
-      "url": `https://farmacompara.it/cerca/${querySlug}`,
-      "numberOfItems": results.products.length,
-      "itemListElement": results.products.slice(0, 10).map((p, i) => {
-        const slug = `${p.name.normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-+|-+$/g,"").slice(0,80)}--${p.pharmacies.name.normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-+|-+$/g,"")}`;
-        const productPage = `https://farmacompara.it/prodotto/${querySlug}/${slug}`;
-        return {
-          "@type": "ListItem",
-          "position": i + 1,
-          "name": p.name,
-          "url": productPage,
-        };
-      }),
-    };
-    const script = document.createElement("script");
-    script.type = "application/ld+json";
-    script.id = "farma-jsonld";
-    script.textContent = JSON.stringify(jsonLd);
-    document.head.appendChild(script);
-    return () => {
-      const el = document.getElementById("farma-jsonld");
-      if (el) el.remove();
-    };
-  }, [results, query, querySlug]);
+  // No ItemList/Product JSON-LD here: product pages (/prodotto/...) are client-side
+  // only and answer HTTP 404 to crawlers on GitHub Pages, so a list pointing to them
+  // (or embedding Product objects without images) only produced Search Console errors.
 
   // Breadcrumb JSON-LD
   useEffect(() => {
