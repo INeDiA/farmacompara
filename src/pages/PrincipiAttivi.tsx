@@ -1,10 +1,29 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { Pill } from "lucide-react";
 import { ALL_PRINCIPI_ATTIVI, toSlug } from "@/lib/principiAttivi";
 
+// Written nightly by scripts/prerender.mjs: molecules no pharmacy currently sells.
+// Their /cerca pages are noindex and out of the sitemap, so they are not linked here.
+const loadEmpty = (): Promise<string[]> =>
+  fetch("/principi-vuoti.json")
+    .then((r) => (r.ok ? r.json() : []))
+    .then((v) => (Array.isArray(v) ? v.filter((x): x is string => typeof x === "string") : []))
+    .catch(() => []);
+
 const PrincipiAttivi = () => {
+  const [emptyNames, setEmptyNames] = useState<string[] | null>(null);
   useEffect(() => {
+    loadEmpty().then(setEmptyNames);
+  }, []);
+  const emptySet = new Set(emptyNames ?? []);
+  const available = [...ALL_PRINCIPI_ATTIVI]
+    .filter((n) => !emptySet.has(n))
+    .sort((a, b) => a.localeCompare(b, "it"));
+  const unavailable = [...emptySet].sort((a, b) => a.localeCompare(b, "it"));
+
+  useEffect(() => {
+    if (emptyNames === null) return;
     const pageTitle = "Principi attivi — prezzo al grammo | FarmaCompara";
     const pageDesc = "Elenco completo dei principi attivi. Confronta il costo al grammo di ogni molecola tra farmacie online italiane.";
     const pageUrl = "https://farmacompara.it/principi-attivi";
@@ -46,8 +65,8 @@ const PrincipiAttivi = () => {
       "description": pageDesc,
       "mainEntity": {
         "@type": "ItemList",
-        "numberOfItems": ALL_PRINCIPI_ATTIVI.length,
-        "itemListElement": ALL_PRINCIPI_ATTIVI.map((name, i) => ({
+        "numberOfItems": available.length,
+        "itemListElement": available.map((name, i) => ({
           "@type": "ListItem",
           "position": i + 1,
           "name": name,
@@ -75,7 +94,8 @@ const PrincipiAttivi = () => {
       const el = document.getElementById("principi-attivi-jsonld");
       if (el) el.remove();
     };
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- available derives from emptyNames
+  }, [emptyNames]);
 
   return (
     <div className="min-h-screen bg-background">
@@ -101,7 +121,7 @@ const PrincipiAttivi = () => {
           </div>
 
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-            {ALL_PRINCIPI_ATTIVI.sort((a, b) => a.localeCompare(b, "it")).map((name) => (
+            {available.map((name) => (
               <Link
                 key={name}
                 to={`/cerca/${toSlug(name)}`}
@@ -112,6 +132,12 @@ const PrincipiAttivi = () => {
               </Link>
             ))}
           </div>
+
+          {unavailable.length > 0 && (
+            <p className="text-sm text-muted-foreground">
+              Al momento non disponibili nelle farmacie online confrontate: {unavailable.join(", ")}.
+            </p>
+          )}
         </div>
       </main>
 

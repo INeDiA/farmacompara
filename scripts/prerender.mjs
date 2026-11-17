@@ -218,12 +218,14 @@ function priceSection(capitalized, products) {
   );
 }
 
+// Neighbouring molecules in list order, skipping the empty (noindex) ones.
 function relatedLinks(name) {
   const i = molecules.indexOf(name);
   const others = [];
   for (let d = 1; others.length < 6 && d < molecules.length; d++) {
     for (const j of [i + d, i - d]) {
       const n = molecules[j];
+      if (n && isEmptyName(n)) continue;
       if (n && n !== name && !others.includes(n) && others.length < 6) others.push(n);
     }
   }
@@ -234,21 +236,28 @@ function relatedLinks(name) {
   );
 }
 
-const generated = [];
-const empty = []; // slugs with a successful search and zero products
-let withPrices = 0;
+// Pass 1: fetch every molecule first, so links on all pages can skip the empty ones.
+const results = new Map(); // name -> products[] | null (null = search failed or no token)
 for (const [idx, name] of molecules.entries()) {
+  if (fetchPrices && idx > 0) await sleep(1500);
+  results.set(name, fetchPrices ? await searchProducts(name) : null);
+}
+// Empty = search succeeded with zero products. A failed search keeps the page indexable.
+const isEmptyName = (n) => Array.isArray(results.get(n)) && results.get(n).length === 0;
+const available = molecules.filter((n) => !isEmptyName(n));
+const emptyNames = molecules.filter(isEmptyName);
+
+// Pass 2: render.
+const generated = [];
+const empty = emptyNames.map(toSlug); // slugs dropped from the sitemap
+let withPrices = 0;
+for (const name of molecules) {
   const lower = name.toLowerCase();
   const capitalized = lower.charAt(0).toUpperCase() + lower.slice(1);
   const slug = toSlug(name);
 
-  let products = null;
-  if (fetchPrices) {
-    if (idx > 0) await sleep(1500);
-    products = await searchProducts(name);
-  }
-  const isEmpty = Array.isArray(products) && products.length === 0;
-  if (isEmpty) empty.push(slug);
+  const products = results.get(name);
+  const isEmpty = isEmptyName(name);
   if (products?.length) withPrices++;
 
   const prices = products?.length
@@ -274,9 +283,12 @@ for (const [idx, name] of molecules.entries()) {
   generated.push(slug);
 }
 
+// Read by the React /principi-attivi page to hide the same molecules after hydration.
+writeFileSync(join(DIST, "principi-vuoti.json"), JSON.stringify(emptyNames));
+
 // ---------- /principi-attivi ----------
 
-const sorted = [...molecules].sort((a, b) => a.localeCompare(b, "it"));
+const sorted = [...available].sort((a, b) => a.localeCompare(b, "it"));
 const items = sorted
   .map((n) => `<li style="margin:.35rem 0"><a href="/cerca/${toSlug(n)}" style="color:#1a7a4a">${esc(n)}</a></li>`)
   .join("");
@@ -290,7 +302,12 @@ write(
     body: shell(
       `<h1 style="font-size:1.75rem;line-height:1.2;margin:1.5rem 0 .75rem;color:#0f2a1c">Tutti i principi attivi</h1>` +
         `<p style="color:#4a7a5a;margin:0">Confronta il costo al grammo di principio attivo tra farmacie online italiane. Seleziona una molecola per vedere i prezzi.</p>` +
-        `<ul style="list-style:none;padding:0;margin:1.5rem 0 0">${items}</ul>`,
+        `<ul style="list-style:none;padding:0;margin:1.5rem 0 0">${items}</ul>` +
+        (emptyNames.length
+          ? `<p style="color:#4a7a5a;margin:1.5rem 0 0">Al momento non disponibili nelle farmacie online confrontate: ` +
+            [...emptyNames].sort((a, b) => a.localeCompare(b, "it")).map(esc).join(", ") +
+            `.</p>`
+          : ""),
     ),
   }),
 );
