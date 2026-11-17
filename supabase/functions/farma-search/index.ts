@@ -263,6 +263,28 @@ async function scrape1000Farmacie(query: string): Promise<ProductResult[]> {
   } catch (err) { console.error("1000Farmacie error:", err); return []; }
 }
 
+// ============ GAUDIANA (Clerk.io search) ============
+// The site's search page is rendered client-side by Clerk; this is the same public
+// key its own pages send from every visitor's browser.
+const GAUDIANA_CLERK_KEY = "0BXlRE4qFjmYr5Sk0vwMdqvlR1KJlwa3";
+async function scrapeGaudiana(query: string): Promise<ProductResult[]> {
+  try {
+    const attrs = encodeURIComponent(JSON.stringify(["name", "price", "url", "image"]));
+    const url = `https://api.clerk.io/v2/search/search?key=${GAUDIANA_CLERK_KEY}&query=${encodeURIComponent(query)}&limit=30&attributes=${attrs}`;
+    const res = await tfetch(url, { headers: { "User-Agent": UA } });
+    if (!res.ok) return [];
+    const data = await res.json();
+    return filterByQuery(
+      (data?.product_data || []).map((p: any) => buildProduct(
+        p.name || "",
+        typeof p.price === "number" ? p.price : parseFloat(p.price) || 0,
+        typeof p.url === "string" && p.url.startsWith("https://farmaciagaudiana.it/") ? p.url : null,
+        typeof p.image === "string" ? encodeURI(p.image) : null,
+      )), query,
+    );
+  } catch (err) { console.error("Gaudiana error:", err); return []; }
+}
+
 // ============ PER-PHARMACY TIMEOUT ============
 // One slow or hanging pharmacy used to stall the whole search (seen: 130s).
 // After this many ms its results are dropped and the others are returned.
@@ -288,7 +310,7 @@ const scrapers: PharmacyScraper[] = [
   { pharmacyName: "Farmae", scrape: scrapeFarmae },
   { pharmacyName: "Amicafarmacia", scrape: scrapeAmicafarmacia },
   { pharmacyName: "Farmacia Igea", scrape: (q) => scrapeOpenCart("https://www.farmaciaigea.com", q) },
-  { pharmacyName: "Farmacia Gaudiana", scrape: (q) => scrapeOpenCart("https://farmaciagaudiana.it", q) },
+  { pharmacyName: "Farmacia Gaudiana", scrape: scrapeGaudiana },
   { pharmacyName: "Farmacia Guacci", scrape: (q) => scrapeOpenCart("https://farmaciaguacci.it", q) },
   { pharmacyName: "Farmacia del Corso", scrape: (q) => scrapeOpenCart("https://farmaciadelcorso.net", q) },
   { pharmacyName: "1000Farmacie", scrape: scrape1000Farmacie },
@@ -422,8 +444,14 @@ Deno.serve(async (req) => {
           .slice(0, MAX_ALIASES)
       : [];
 
+    // "X topico" pages: product names rarely say "topico", so search the molecule
+    // itself and keep only topical forms (gel, crema, spray, cerotti...).
+    const topicalOnly = /\s+topico$/.test(query);
+    const baseQuery = query.replace(/\s+topico$/, "");
+    const keepForm = (p: ProductResult) => !topicalOnly || isTopical(p.name);
+
     // Termini su cui interrogare gli scraper: principio attivo + eventuali brand alias
-    const searchTerms = [query, ...aliases];
+    const searchTerms = [baseQuery, ...aliases];
     // Pattern usato per filtrare i risultati (match se contiene una qualunque keyword)
     const filterPattern = searchTerms.join("|");
 
@@ -436,7 +464,7 @@ Deno.serve(async (req) => {
         const report: Record<string, number> = {};
         await Promise.all(scrapers.map(async (s) => {
           const t0 = Date.now();
-          const found = await withTimeout(s.scrape(query), SCRAPER_TIMEOUT_MS, s.pharmacyName);
+          const found = (await withTimeout(s.scrape(baseQuery), SCRAPER_TIMEOUT_MS, s.pharmacyName)).filter(keepForm);
           report[s.pharmacyName] = found.length;
           TRACE?.push(`${s.pharmacyName}: ${found.length} products in ${Date.now() - t0}ms`);
         }));
@@ -515,7 +543,7 @@ Deno.serve(async (req) => {
           searchTerms.map(async (term) => {
             const products = await withTimeout(s.scrape(term), SCRAPER_TIMEOUT_MS, s.pharmacyName);
             // Re-filtra con il pattern combinato così non perdiamo brand match dentro risultati di altri termini
-            return filterByQuery(products, filterPattern);
+            return filterByQuery(products, filterPattern).filter(keepForm);
           }),
         );
         // Dedup per URL prodotto (fallback sul nome)
