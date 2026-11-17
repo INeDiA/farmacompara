@@ -151,11 +151,27 @@ function filterByQuery(products: ProductResult[], query: string): ProductResult[
   });
 }
 
+// ============ DIAGNOSTICS ============
+// Filled only during a ?debug=1 request from the prerender build (see handler).
+let TRACE: string[] | null = null;
+async function tfetch(url: string, init?: RequestInit): Promise<Response> {
+  const t0 = Date.now();
+  const host = new URL(url).host;
+  try {
+    const res = await fetch(url, init);
+    TRACE?.push(`${host} → HTTP ${res.status} in ${Date.now() - t0}ms${res.redirected ? ` (redirected to ${new URL(res.url).host})` : ""}`);
+    return res;
+  } catch (err) {
+    TRACE?.push(`${host} → ${String(err).slice(0, 200)} after ${Date.now() - t0}ms`);
+    throw err;
+  }
+}
+
 // ============ FARMAE (Shopify) ============
 async function scrapeFarmae(query: string): Promise<ProductResult[]> {
   try {
     const url = `https://www.farmae.it/search/suggest.json?q=${encodeURIComponent(query)}&resources%5Btype%5D=product&resources%5Blimit%5D=20`;
-    const res = await fetch(url, { headers: { "User-Agent": UA } });
+    const res = await tfetch(url, { headers: { "User-Agent": UA } });
     if (!res.ok) return [];
     const data = await res.json();
     const products = data?.resources?.results?.products || [];
@@ -172,7 +188,7 @@ async function scrapeFarmae(query: string): Promise<ProductResult[]> {
 async function scrapeAmicafarmacia(query: string): Promise<ProductResult[]> {
   try {
     const url = `https://www.amicafarmacia.com/search/suggest.json?q=${encodeURIComponent(query)}&resources%5Btype%5D=product&resources%5Blimit%5D=20`;
-    const res = await fetch(url, { headers: { "User-Agent": UA } });
+    const res = await tfetch(url, { headers: { "User-Agent": UA } });
     if (!res.ok) return [];
     const data = await res.json();
     const products = data?.resources?.results?.products || [];
@@ -189,7 +205,7 @@ async function scrapeAmicafarmacia(query: string): Promise<ProductResult[]> {
 async function scrapeOpenCart(baseUrl: string, query: string): Promise<ProductResult[]> {
   try {
     const url = `${baseUrl}/index.php?route=product/search&search=${encodeURIComponent(query)}`;
-    const res = await fetch(url, { headers: { "User-Agent": UA }, redirect: "follow" });
+    const res = await tfetch(url, { headers: { "User-Agent": UA }, redirect: "follow" });
     if (!res.ok) return [];
     const html = await res.text();
 
@@ -218,7 +234,7 @@ async function scrapeOpenCart(baseUrl: string, query: string): Promise<ProductRe
 // ============ 1000FARMACIE (Algolia) ============
 async function scrape1000Farmacie(query: string): Promise<ProductResult[]> {
   try {
-    const res = await fetch(
+    const res = await tfetch(
       "https://hw3t8wvs73-dsn.algolia.net/1/indexes/Product/query",
       {
         method: "POST",
@@ -232,45 +248,19 @@ async function scrape1000Farmacie(query: string): Promise<ProductResult[]> {
     );
     if (!res.ok) return [];
     const data = await res.json();
+    TRACE?.push(`1000Farmacie: ${data?.hits?.length ?? 0} Algolia hits`);
     return filterByQuery(
       (data?.hits || []).map((h: any) => {
-        const name = h.name || h.title || "";
+        // Index fields as of 2026-11: display_name, link ("/<slug>.html"), url_for_cover_image.
+        const name = h.display_name || h.name || h.title || "";
         const price = typeof h.price === "number" ? h.price : parseFloat(h.price) || 0;
-        const productUrl = h.url || h.slug ? `https://1000farmacie.it${h.url || h.slug}` : null;
-        const image = h.image_url || h.image || h.thumbnail || null;
+        const path = h.link || (h.slug ? `/${h.slug}.html` : null);
+        const productUrl = path ? `https://www.1000farmacie.it${path.startsWith("/") ? path : `/${path}`}` : null;
+        const image = h.url_for_cover_image || h.image_url || h.image || null;
         return buildProduct(name, price, productUrl, image);
       }), query,
     );
   } catch (err) { console.error("1000Farmacie error:", err); return []; }
-}
-
-// ============ FARMAEUROPE (Magento autocomplete) ============
-async function scrapeFarmaeurope(query: string): Promise<ProductResult[]> {
-  try {
-    const url = `https://www.farmaeurope.eu/searchautocomplete/ajax/suggest/?q=${encodeURIComponent(query)}&store_id=4`;
-    const res = await fetch(url, { headers: { "User-Agent": UA, "X-Requested-With": "XMLHttpRequest" } });
-    if (!res.ok) return [];
-    const data = await res.json();
-    const items = Array.isArray(data) ? data : (data?.results || data?.items || []);
-    return filterByQuery(
-      items.map((item: any) => {
-        const name = item.name || item.title || "";
-        // Price can be in data-price-amount attribute within HTML or plain text
-        let price = 0;
-        if (item.price) {
-          const priceAmountMatch = String(item.price).match(/data-price-amount="([^"]+)"/);
-          if (priceAmountMatch) {
-            price = parseFloat(priceAmountMatch[1]) || 0;
-          } else {
-            price = parseItalianPrice(String(item.price));
-          }
-        }
-        const productUrl = item.url || null;
-        const image = item.imageUrl || item.image || item.thumbnail || null;
-        return buildProduct(name, price, productUrl, image);
-      }), query,
-    );
-  } catch (err) { console.error("Farmaeurope error:", err); return []; }
 }
 
 // ============ PER-PHARMACY TIMEOUT ============
@@ -302,7 +292,7 @@ const scrapers: PharmacyScraper[] = [
   { pharmacyName: "Farmacia Guacci", scrape: (q) => scrapeOpenCart("https://farmaciaguacci.it", q) },
   { pharmacyName: "Farmacia del Corso", scrape: (q) => scrapeOpenCart("https://farmaciadelcorso.net", q) },
   { pharmacyName: "1000Farmacie", scrape: scrape1000Farmacie },
-  { pharmacyName: "Farmaeurope", scrape: scrapeFarmaeurope },
+  // Farmaeurope dropped 2026-11: www.farmaeurope.eu now redirects to Farmae.
 ];
 
 // ============ RATE LIMITING ============
@@ -436,6 +426,27 @@ Deno.serve(async (req) => {
     const searchTerms = [query, ...aliases];
     // Pattern usato per filtrare i risultati (match se contiene una qualunque keyword)
     const filterPattern = searchTerms.join("|");
+
+    // Diagnostics for the build: per-pharmacy result counts and HTTP outcomes,
+    // without touching cache or products. Only with a valid PRERENDER_TOKEN.
+    {
+      const tok = Deno.env.get("PRERENDER_TOKEN");
+      if (url.searchParams.get("debug") === "1" && tok && req.headers.get("x-prerender-token") === tok) {
+        TRACE = [];
+        const report: Record<string, number> = {};
+        await Promise.all(scrapers.map(async (s) => {
+          const t0 = Date.now();
+          const found = await withTimeout(s.scrape(query), SCRAPER_TIMEOUT_MS, s.pharmacyName);
+          report[s.pharmacyName] = found.length;
+          TRACE?.push(`${s.pharmacyName}: ${found.length} products in ${Date.now() - t0}ms`);
+        }));
+        const trace = TRACE;
+        TRACE = null;
+        return new Response(JSON.stringify({ query, report, trace }, null, 2), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+    }
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
